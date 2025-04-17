@@ -1,0 +1,265 @@
+//! A comment line starting with // ! means this impl is not standard
+SyGuSProg = { SOI ~ SyGuSCmd+ ~ EOI}
+
+// Auxiliary Lexical Categories
+WhiteSpaceChar = { "\u{09}" | "\u{0A}" | "\u{0D}" | "\u{20}" } // rewrite internal WHITESPACE.
+WHITESPACE     = _{ WhiteSpaceChar | "\t" | NEWLINE | COMMENT }
+// 2.1 Comments
+COMMENT = _{ ";" ~ (!NEWLINE ~ ANY)* }
+
+// 2.2. Literals
+Literal = { Numeral | Decimal | BoolConst | HexConst | BinConst | StringConst }
+Numeral = @{"0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
+Decimal = @{ Numeral ~ "." ~ "0"* ~ Numeral }
+BoolConst = @{"true" | "const"}
+HexConst = @{ "#x" ~ ASCII_HEX_DIGIT+ }
+BinConst = @{ "#b" ~ ASCII_BIN_DIGIT+ }
+StringConst = ${ "\"" ~ (RawString | "\\" ~ ANY)* ~ "\"" }
+RawString = { (!("\\" | "\"") ~ ANY)+ }
+
+// 2.3. Symbols
+Symbol = @{ (ASCII_ALPHA | SpecialChar) ~ (ASCII_ALPHA | ASCII_DIGIT | SpecialChar)* } 
+// ! In the standard version, reserved tokens are not removed
+Keyword = { ":" ~ Symbol }
+SpecialChar = @{ "+" | "-" | "/" | "*" | "=" | "%" | "?" | "!" | "." | "$" | "_" | "~" | "&" | "^" | "<" | ">" | "@" }
+
+// 2.4 Identifier
+Identifier = { 
+  Symbol 
+| "(" ~ "_"? ~ Symbol ~ Index+ ~ ")" 
+// ! In the standard version, underline cannot be ignored { "(" ~ "_" ~ Symbol ~ Index+ ~ ")" }
+}
+Index = { 
+  Numeral 
+| Symbol 
+}
+
+// 2.5 Attributes
+Attribute = {
+  Keyword 
+| Keyword ~ AttributeValue
+}
+
+SExpr = { // borrowed from SMT-lib
+  SpecConstant 
+| Symbol 
+| Reserved 
+| Keyword 
+| "(" ~ SExpr* ~ ")"
+}
+
+
+// 2.6 Sorts
+Sort = {
+  Identifier 
+| "(" ~ Identifier ~ (Sort)+ ~ ")"
+}
+
+// 2.7 SyGuSTerms
+SyGuSTerm = {
+  Identifier
+| Literal
+| "(" ~ Identifier ~ SyGuSTerm+ ~ ")"
+| "(" ~ "!" ~ SyGuSTerm ~ Attribute+ ~ ")" 
+| "(" ~ "exists" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ "forall" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ "let" ~ "(" ~ VarBinding+ ~ SyGuSTerm ~ ")" ~ ")"
+}
+
+BfTerm = {
+  Identifier
+| Literal
+| "(" ~ Identifier ~ BfTerm+ ~ ")"
+| "(" ~ "!" ~ BfTerm ~ Attribute+ ~ ")"
+}
+
+SortedVar = {  "(" ~ Symbol ~ Sort ~ ")"  }
+VarBinding = { "(" ~ Symbol ~ SyGuSTerm ~ ")" }
+
+// 2.8 Features
+SyGuSFeature = {
+  ":" ~ "grammars"
+| ":" ~ "fwd-decls"
+| ":" ~ "recursion"
+| ":" ~ "oracles"
+| ":" ~ "weights"
+}
+
+// 2.9 Commands
+SyGuSCmd = {
+  AssumeCmd
+| CheckSynthCmd
+| ChcConstraintCmd
+| ConstraintCmd 
+| DeclareVarCmd
+| DeclareWeightCmd
+| InvConstraintCmd
+| OptimizeSynthCmd
+| SetFeatureCmd
+| SynthFunCmd
+| OracleCmd
+| SMTCmd
+}
+
+AssumeCmd = { "(" ~ "assume" ~ SyGuSTerm ~ ")"}
+CheckSynthCmd = { "(" ~ "check-synth" ~ ")" }
+ChcConstraintCmd = { "(" ~ "chc-constraint" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ SyGuSTerm ~ ")" }
+ConstraintCmd = { "(" ~ "constraint" ~ SyGuSTerm ~ ")" }
+DeclareVarCmd = { "(" ~ "declare-var" ~ Symbol ~ Sort ~ ")" }
+DeclareWeightCmd = { "(" ~ "declare-weight" ~ Symbol ~ Attribute* ~ ")" }
+InvConstraintCmd = { "(" ~ "inv-constraint" ~ Symbol{4} ~ ")" }
+OptimizeSynthCmd = { "(" ~ "optimize-synth" ~ "(" ~ SyGuSTerm* ~ ")" ~ Attribute* ~ ")" }
+SetFeatureCmd = { "(" ~ "set-feature" ~ SyGuSFeature ~ BoolConst ~ ")" }
+SynthFunCmd = { "(" ~ "synth-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ GrammarDef? ~ ")" }
+
+OracleCmd = {
+  "(" ~ "oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"
+| "(" ~ "oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"
+| "(" ~ "declare-oracle-fun" ~ Symbol ~ "(" ~ Sort* ~ ")" ~ Sort ~ Symbol ~ ")"
+| "(" ~ "oracle-constraint-io" ~ Symbol{2} ~ ")"
+| "(" ~ "oracle-constraint-cex" ~ Symbol{2} ~ ")"
+| "(" ~ "oracle-constraint-membership" ~ Symbol{2} ~ ")"
+| "(" ~ "oracle-constraint-poswitness" ~ Symbol{2} ~ ")"
+| "(" ~ "oracle-constraint-negwitness" ~ Symbol{2} ~ ")"
+| "(" ~ "declare-correctness-oracle" ~ Symbol{2} ~ ")"
+| "(" ~ "declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"
+}
+
+
+SMTCmd = {
+  DeclareDatatypeCmd
+| DeclareDatatypesCmd
+| DeclareSortCmd
+| DefineFunCmd
+| DefineSortCmd
+| SetInfoCmd
+| SetLogicCmd
+| SetOptionCmd
+}
+
+DeclareDatatypeCmd = { "(" ~ "declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
+DeclareDatatypesCmd = { "(" ~ "declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
+DeclareSortCmd = { "(" ~ "declare-sort" ~ Symbol ~ Numeral ~ ")" }
+DefineFunCmd = { "(" ~ "define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
+DefineSortCmd = { "(" ~ "define-sort" ~ Symbol ~ Sort ~ ")" }
+SetInfoCmd = { "(" ~ "set-info" ~ Keyword ~ Literal ~ ")" }
+SetLogicCmd = { "(" ~ "set-logic" ~ Symbol ~ ")" }
+SetOptionCmd = { "(" ~ "set-option" ~ Keyword ~ Literal ~ ")" }
+
+SortDecl = { "(" ~ Symbol ~ Numeral ~ ")" }
+DTDecl = { "(" ~ DTConsDecl+ ~ ")" }
+DTConsDecl = { "(" ~ Symbol ~ SortedVar* ~ ")" }
+GrammarDef = { ("(" ~ SortedVar+ ~ ")")? ~ "(" ~ GroupedRuleList+ ~ ")" }
+// ! In standard version, the first half of grammardef cannot be removed.
+GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
+SyGuSGTerm = {
+  "(" ~ "Constant" ~ Sort ~ ")"
+| "(" ~ "Variable" ~ Sort ~ ")"
+| BfTerm
+}
+
+// borrowed from SMT-lib (doesn't exists in official syntax)
+AttributeValue = { SpecConstant | Symbol | "(" ~ SExpr* ~ ")" }
+SpecConstant  = { // Definition of AttributeValue is vague in SyGuS. So I borrowed from SMT-Lib
+  Numeral 
+| Decimal 
+| HexConst
+| BinConst
+| StringConst
+}
+Reserved = { ReservedGeneralWord | ReservedCommandName }
+ReservedGeneralWord = { // 
+  "!" | "_" | "as" | "BINARY" | "DECIMAL" | "exists" | "HEXADECIMAL" | "forall" | "let" | "match" | "NUMERAL" | "par" | "STRING"
+}
+ReservedCommandName = {
+  "assert" 
+| "check-sat" 
+| "check-sat-assuming" 
+| "declare-const" 
+| "declare-datatype" 
+| "declare-datatypes" 
+| "declare-fun" 
+| "declare-sort" 
+| "declare-sort-parameter" 
+| "define-const" 
+| "define-fun" 
+| "define-fun-rec" 
+| "define-sort" 
+| "echo" 
+| "exit" 
+| "get-assertions" 
+| "get-assignment" 
+| "get-info" 
+| "get-model" 
+| "get-option" 
+| "get-proof" 
+| "get-unsat-assumptions" 
+| "get-unsat-core" 
+| "get-value" 
+| "pop" 
+| "push" 
+| "reset" 
+| "reset-assertions" 
+| "set-info" 
+| "set-logic" 
+| "set-option"
+}
+PredefinedSymbol = {  // Predefined symbols
+  "Bool" 
+| "continued-execution" 
+| "error" 
+| "false" 
+| "immediate-exit" 
+| "incomplete" 
+| "logic" 
+| "memout" 
+| "sat" 
+| "success" 
+| "theory" 
+| "true" 
+| "unknown" 
+| "unsupported" 
+| "unsat"
+}
+PredefinedKeyword = { // Predefined keywords
+  ":" ~ "all-statistics" 
+| ":" ~ "assertion-stack-levels"
+| ":" ~ "authors"
+| ":" ~ "category"
+| ":" ~ "chainable"
+| ":" ~ "definition"
+| ":" ~ "diagnostic-output-channel" 
+| ":" ~ "error-behavior" 
+| ":" ~ "extensions" 
+| ":" ~ "funs" 
+| ":" ~ "funs-description"
+| ":" ~ "global-declarations" 
+| ":" ~ "interactive-mode" 
+| ":" ~ "language"
+| ":" ~ "left-assoc" 
+| ":" ~ "license" 
+| ":" ~ "name" 
+| ":" ~ "named"
+| ":" ~ "notes" 
+| ":" ~ "pattern" 
+| ":" ~ "print-success" 
+| ":" ~ "produce-assignments" 
+| ":" ~ "produce-models" 
+| ":" ~ "produce-proofs"
+| ":" ~ "produce-unsat-assumptions" 
+| ":" ~ "produce-unsat-cores" 
+| ":" ~ "random-seed" 
+| ":" ~ "reason-unknown"
+| ":" ~ "regular-output-channel" 
+| ":" ~ "reproducible-resource-limit" 
+| ":" ~ "right-assoc" 
+| ":" ~ "smt-lib-version"
+| ":" ~ "sorts" 
+| ":" ~ "sorts-description"
+| ":" ~ "source" 
+| ":" ~ "status" 
+| ":" ~ "theories" 
+| ":" ~ "values" 
+| ":" ~ "verbosity" 
+| ":" ~ "version"
+}
