@@ -1,0 +1,2 @@
+*.sl linguist-language=SyGuS
+*.pest linguist-language=Rust

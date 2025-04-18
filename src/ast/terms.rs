@@ -1,8 +1,11 @@
 use super::utils::*;
 use super::sorts::*;
 use crate::parser::Rule;
+use crate::SyGuSParseError;
 use itertools::Itertools;
 use pest::iterators::Pair;
+use pest::Parser;
+use crate::parser::SyGuSParser;
 
 #[derive(Debug, Clone)]
 pub enum SyGuSTerm {
@@ -26,14 +29,23 @@ pub enum SyGuSTerm {
 //   }
 
 impl SyGuSTerm {
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::SyGuSTerm, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse SyGuSTerm: {}", s))
+        })?;
+        SyGuSTerm::parse(pair)   
+    }
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         // Check if we're already at a SyGuSTerm rule, or need to extract it
         let term_pair = if pair.as_rule() == Rule::SyGuSTerm {
             pair
         } else {
             // Assume this is some parent rule containing a SyGuSTerm
-            pair.into_inner().next().ok_or_else(|| {
-                unimplemented!("Expected a SyGuSTerm, but found none in the parent rule.");
+            pair.clone().into_inner().next().ok_or_else(|| {
+                SyGuSParseError::InvalidSyntax(format!(
+                    "Expected a SyGuSTerm, but found none in: {:?}",
+                    pair
+                ))
             })?
         };
 
@@ -45,7 +57,7 @@ impl SyGuSTerm {
                 parse_identifier(pair.as_str()).unwrap(),
             )),
             [pair] if pair.as_rule() == Rule::Literal => {
-                Ok(SyGuSTerm::Literal(Literal::parse(pair.as_str())))
+                Ok(SyGuSTerm::Literal(Literal::from_str(pair.as_str())))
             }
             // Handle Application (Identifier followed by one or more SyGuSTerm)
             [id_pair, term_pairs @ ..]
@@ -108,10 +120,12 @@ impl SyGuSTerm {
                 Ok(SyGuSTerm::Let(var_bindings, Box::new(term)))
             }
 
-            _ => unreachable!(
-                "Unexpected structure in SyGuSTerm parsing: {:?}",
-                inner_pairs
-            ),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Unexpected structure in SyGuSTerm parsing: {:?}",
+                    inner_pairs
+                )))   
+            }
         }
     }
 }
@@ -125,14 +139,20 @@ pub enum SyGuSBfTerm {
 
 // SyGuSBfTerm = { Identifier | Literal | "(" ~ Identifier ~ SyGuSBfTerm+ ~ ")" | "(" ~ "!" ~ SyGuSBfTerm ~ Attribute+ ~ ")" }
 impl SyGuSBfTerm {
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::SyGuSBfTerm, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse SyGuSBfTerm: {}", s))
+        })?;
+        SyGuSBfTerm::parse(pair)
+    }
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [pair] if pair.as_rule() == Rule::Identifier => {
                 Ok(SyGuSBfTerm::Identifier(parse_identifier(pair.as_str()).unwrap()))
             }
             [pair] if pair.as_rule() == Rule::Literal => {
-                Ok(SyGuSBfTerm::Literal(Literal::parse(pair.as_str())))
+                Ok(SyGuSBfTerm::Literal(Literal::from_str(pair.as_str())))
             }
             // Handle Application (Identifier followed by one or more SyGuSBfTerm)
             [id_pair, term_pairs @ ..]
@@ -161,7 +181,12 @@ impl SyGuSBfTerm {
                 Ok(SyGuSBfTerm::Annotated(Box::new(term), attributes))
             }
 
-            _ => unreachable!("Unexpected structure in SyGuSBfTerm parsing: {:?}", inner_pairs),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Unexpected structure in SyGuSBfTerm parsing: {:?}",
+                    inner_pairs
+                )))
+            }
         }
     }
 }
@@ -175,7 +200,13 @@ pub enum SyGuSGTerm {
 
 // SyGuSGTerm = { "(" ~ "Constant" ~ Sort ~ ")" | "(" ~ "Variable" ~ Sort ~ ")" | SyGuSBfTerm }
 impl SyGuSGTerm {
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::SyGuSGTerm, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse SyGuSGTerm: {}", s))
+        })?;
+        SyGuSGTerm::parse(pair)
+    }
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [constant_pair] if constant_pair.as_str() == "Constant" => {
@@ -190,10 +221,12 @@ impl SyGuSGTerm {
                 let bf_term = SyGuSBfTerm::parse(bf_term_pair.clone())?;
                 Ok(SyGuSGTerm::SyGuSBfTerm(bf_term))
             }
-            _ => unreachable!(
-                "Unexpected structure in SyGuSGTerm parsing: {:?}",
-                inner_pairs
-            ),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Unexpected structure in SyGuSGTerm parsing: {:?}",
+                    inner_pairs
+                )))
+            }
         }
     }
 }
@@ -207,28 +240,28 @@ pub struct GroupedRuleList {
 
 // GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
 impl GroupedRuleList {
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::GroupedRuleList, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse GroupedRuleList: {}", s))
+        })?;
+        GroupedRuleList::parse(pair)
+    }
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         if inner_pairs.len() >= 2 {
             // Extract symbol (should be the first element)
-            let symbol = match inner_pairs.get(0) {
-                Some(sym_pair) => parse_identifier(sym_pair.as_str()).ok_or_else(|| {
-                    unimplemented!(
-                        "Expected a valid identifier for symbol, but found: {}",
-                        sym_pair.as_str()
-                    )
+            let symbol = match inner_pairs.get(0).unwrap() {
+                sym_pair => parse_identifier(sym_pair.as_str()).ok_or_else(|| {
+                    SyGuSParseError::InvalidSyntax(format!(
+                        "Expected a symbol, but found: {:?}",
+                        sym_pair
+                    ))
                 })?,
-                None => {
-                    unreachable!("Expected a symbol, but found none in GroupedRuleList parsing.")
-                }
             };
 
             // Extract sort (should be the second element)
-            let sort = match inner_pairs.get(1) {
-                Some(sort_pair) => Sort::parse(sort_pair.clone())?,
-                None => {
-                    unreachable!("Expected a sort, but found none in GroupedRuleList parsing.")
-                }
+            let sort = match inner_pairs.get(1).unwrap() {
+                sort_pair => Sort::parse(sort_pair.clone())?,
             };
 
             // Collect all terms (could be in a container or individual elements)
@@ -276,8 +309,14 @@ pub struct GrammarDef {
 }
 
 impl GrammarDef {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::GrammarDef, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse GrammarDef: {}", s))
+        })?;
+        GrammarDef::parse(pair)
+    }
     // GrammarDef = { ("(" ~ SortedVar+ ~ ")")? ~ "(" ~ GroupedRuleList+ ~ ")" }
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         let mut sorted_vars = Vec::new();
         let mut grouped_rule_lists = Vec::new();
@@ -292,10 +331,12 @@ impl GrammarDef {
                     let grouped_rule_list = GroupedRuleList::parse(inner_pair)?;
                     grouped_rule_lists.push(grouped_rule_list);
                 }
-                _ => unreachable!(
-                    "Unexpected structure in GrammarDef parsing: {:?}",
-                    inner_pair
-                ),
+                _ => {
+                    Err(SyGuSParseError::InvalidSyntax(format!(
+                        "Unexpected structure in GrammarDef parsing: {:?}",
+                        inner_pair
+                    )))?;
+                }
             }
         }
 

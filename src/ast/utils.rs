@@ -1,8 +1,11 @@
 use crate::ast::sorts::Sort;
 use crate::ast::terms::SyGuSTerm;
-use crate::parser::Rule;
+use crate::parser::*;
+use crate::SyGuSParseError;
 use itertools::Itertools;
 use pest::iterators::Pair;
+
+
 pub type Identifier = String;
 pub type Symbol = String;
 
@@ -63,7 +66,13 @@ pub struct SortedVar {
 }
 
 impl SortedVar {
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::SortedVar, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse SortedVar: {}", s))
+        })?;
+        SortedVar::parse(pair)
+    }
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [symbol_pair, sort_pair] => {
@@ -71,7 +80,12 @@ impl SortedVar {
                 let sort = Sort::parse(sort_pair.clone())?;
                 Ok(SortedVar { name: symbol, sort })
             }
-            _ => unimplemented!(),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Expected SortedVar, found: {:?}",
+                    inner_pairs
+                )))
+            }
         }
     }
 }
@@ -89,8 +103,14 @@ pub struct VarBinding {
 }
 
 impl VarBinding {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::VarBinding, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse VarBinding: {}", s))
+        })?;
+        VarBinding::parse(pair)
+    }
     // VarBinding = { "(" ~ Symbol ~ SyGuSTerm ~ ")" }
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [symbol_pair, term_pair] => {
@@ -117,7 +137,7 @@ pub enum Literal {
 }
 
 impl Literal {
-    pub fn parse(s: &str) -> Self {
+    pub fn from_str(s: &str) -> Self {
         if let Ok(num) = s.parse::<i64>() {
             return Literal::Numeral(num);
         }
@@ -130,27 +150,35 @@ impl Literal {
         if s == "false" {
             return Literal::Bool(false);
         }
-        if s.starts_with("0x") && s[2..].chars().all(|c| c.is_digit(16)) {
+        if s.starts_with("#x") && s[2..].chars().all(|c| c.is_digit(16)) {
             return Literal::HexConst(s.to_string());
         }
-        if s.starts_with("0b") && s[2..].chars().all(|c| c == '0' || c == '1') {
+        if s.starts_with("#b") && s[2..].chars().all(|c| c == '0' || c == '1') {
             return Literal::BinConst(s.to_string());
         }
         Literal::StringConst(s.to_string())
     }
 }
 
+// Attribute = { Keyword  | Keyword ~ AttributeValue }
 #[derive(Debug, Clone)]
 pub struct Attribute {
     pub keyword: String,
     pub value: Option<AttributeValue>,
 }
 
+
 impl Attribute {
+    pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
+        let pair = SyGuSParser::parse(Rule::Attribute, s)?.next().ok_or_else(|| {
+            SyGuSParseError::InvalidSyntax(format!("Failed to parse Attribute: {}", s))
+        })?;
+        Attribute::parse(pair)
+    }
     // AttributeValue = { SpecConstant | Symbol | "(" ~ SExpr* ~ ")" }
     // SExpr = { // borrowed from SMT-lib 
     // SpecConstant  | Symbol | Reserved  | Keyword  | "(" ~ SExpr* ~ ")" }
-    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [keyword_pair] if keyword_pair.as_rule() == Rule::Keyword => {
@@ -160,7 +188,12 @@ impl Attribute {
                     value: None,
                 })
             }
-            _ => unimplemented!(),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Expected Attribute, found: {:?}",
+                    inner_pairs
+                )))
+            }
         }
     }
 }

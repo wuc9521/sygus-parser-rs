@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Parse the SyGuS problem
-    let result = SyGuSFile::parse(&content);
+    let result = SyGuSFile::from_str(&content);
     match result {
         Ok(problem) => {
             if args.verbose {

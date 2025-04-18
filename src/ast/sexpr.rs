@@ -1,5 +1,6 @@
 use crate::ast::utils::*;
 use crate::parser::Rule;
+use crate::SyGuSParseError;
 use itertools::Itertools;
 use pest::iterators::Pair;
 
@@ -18,7 +19,7 @@ pub enum _Reserved {
 }
 
 impl _Reserved {
-    pub fn _parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn _parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [id_pair] if id_pair.as_rule() == Rule::Identifier => {
@@ -29,7 +30,12 @@ impl _Reserved {
                 let command_name = _CommandName::_parse(id_pair.clone())?;
                 Ok(_Reserved::CommandName(command_name))
             }
-            _ => unreachable!("Unexpected reserved structure: {:?}", inner_pairs),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Expected Reserved, found: {:?}",
+                    inner_pairs
+                )))
+            }
         }
     }
 }
@@ -69,7 +75,7 @@ pub enum _CommandName {
 }
 
 impl _CommandName {
-    pub fn _parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
+    pub fn _parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [id_pair] if id_pair.as_rule() == Rule::ReservedCommandName => {
@@ -105,11 +111,21 @@ impl _CommandName {
                     "set-info" => _CommandName::SetInfo,
                     "set-logic" => _CommandName::SetLogic,
                     "set-option" => _CommandName::SetOption,
-                    _ => unreachable!("Unexpected command name: {}", id_pair.as_str()),
+                    _ => {
+                        return Err(SyGuSParseError::InvalidSyntax(format!(
+                            "Unknown command name: {}",
+                            id_pair.as_str()
+                        )));
+                    }
                 };
                 Ok(command_name)
             }
-            _ => unreachable!("Unexpected command name structure: {:?}", inner_pairs),
+            _ => {
+                Err(SyGuSParseError::InvalidSyntax(format!(
+                    "Expected ReservedCommandName, found: {:?}",
+                    inner_pairs
+                )))
+            }
         }
     }
 }

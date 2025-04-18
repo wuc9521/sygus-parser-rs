@@ -1,7 +1,5 @@
-mod error;
-
+pub mod error;
 pub use error::*;
-
 pub use pest::Parser;
 
 #[derive(pest_derive::Parser)]
