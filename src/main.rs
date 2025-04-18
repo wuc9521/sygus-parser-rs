@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use clap::Parser;
-use sygus_parser::ast::SyGuSProblem;
+use sygus_parser::ast::SyGuSFile;
 
 /// SyGuS Parser Application
 #[derive(Parser, Debug)]
@@ -35,12 +35,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Parse the SyGuS problem
-    let result = SyGuSProblem::parse(&content);
+    let result = SyGuSFile::parse(&content);
     match result {
         Ok(problem) => {
-            println!("Successfully parsed SyGuS problem from {}", args.file.display());
             if args.verbose {
-                println!("Problem details: {:?}", problem);
+                println!("{:?}", problem);
             } else {
                 println!("Use --verbose for detailed output");
             }

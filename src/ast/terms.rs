@@ -1,4 +1,4 @@
-use super::common::*;
+use super::utils::*;
 use super::sorts::*;
 use crate::parser::Rule;
 use itertools::Itertools;
@@ -116,52 +116,52 @@ impl SyGuSTerm {
     }
 }
 #[derive(Debug, Clone)]
-pub enum BfTerm {
+pub enum SyGuSBfTerm {
     Identifier(Identifier),
     Literal(Literal),
-    Application(Identifier, Vec<BfTerm>),
-    Annotated(Box<BfTerm>, Vec<Attribute>),
+    Application(Identifier, Vec<SyGuSBfTerm>),
+    Annotated(Box<SyGuSBfTerm>, Vec<Attribute>),
 }
 
-// BfTerm = { Identifier | Literal | "(" ~ Identifier ~ BfTerm+ ~ ")" | "(" ~ "!" ~ BfTerm ~ Attribute+ ~ ")" }
-impl BfTerm {
+// SyGuSBfTerm = { Identifier | Literal | "(" ~ Identifier ~ SyGuSBfTerm+ ~ ")" | "(" ~ "!" ~ SyGuSBfTerm ~ Attribute+ ~ ")" }
+impl SyGuSBfTerm {
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
             [pair] if pair.as_rule() == Rule::Identifier => {
-                Ok(BfTerm::Identifier(parse_identifier(pair.as_str()).unwrap()))
+                Ok(SyGuSBfTerm::Identifier(parse_identifier(pair.as_str()).unwrap()))
             }
             [pair] if pair.as_rule() == Rule::Literal => {
-                Ok(BfTerm::Literal(Literal::parse(pair.as_str())))
+                Ok(SyGuSBfTerm::Literal(Literal::parse(pair.as_str())))
             }
-            // Handle Application (Identifier followed by one or more BfTerm)
+            // Handle Application (Identifier followed by one or more SyGuSBfTerm)
             [id_pair, term_pairs @ ..]
                 if id_pair.as_rule() == Rule::Identifier && !term_pairs.is_empty() =>
             {
                 let identifier = parse_identifier(id_pair.as_str()).unwrap();
                 let terms = term_pairs
                     .iter()
-                    .map(|p| BfTerm::parse(p.clone()))
+                    .map(|p| SyGuSBfTerm::parse(p.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
                 // println!("Parsed identifier: {:?}", identifier);
                 // println!("Parsed terms: {:?}", terms);
-                Ok(BfTerm::Application(identifier, terms))
+                Ok(SyGuSBfTerm::Application(identifier, terms))
             }
 
-            // Handle Annotated ("!" BfTerm Attribute+)
+            // Handle Annotated ("!" SyGuSBfTerm Attribute+)
             [bang, term_pair, attr_pairs @ ..]
                 if bang.as_str() == "!" && !attr_pairs.is_empty() =>
             {
-                let term = BfTerm::parse(term_pair.clone())?;
+                let term = SyGuSBfTerm::parse(term_pair.clone())?;
                 let attributes = attr_pairs
                     .iter()
                     .map(|p| Attribute::parse(p.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
 
-                Ok(BfTerm::Annotated(Box::new(term), attributes))
+                Ok(SyGuSBfTerm::Annotated(Box::new(term), attributes))
             }
 
-            _ => unreachable!("Unexpected structure in BfTerm parsing: {:?}", inner_pairs),
+            _ => unreachable!("Unexpected structure in SyGuSBfTerm parsing: {:?}", inner_pairs),
         }
     }
 }
@@ -170,10 +170,10 @@ impl BfTerm {
 pub enum SyGuSGTerm {
     Constant(Sort),
     Variable(Sort),
-    BfTerm(BfTerm),
+    SyGuSBfTerm(SyGuSBfTerm),
 }
 
-// SyGuSGTerm = { "(" ~ "Constant" ~ Sort ~ ")" | "(" ~ "Variable" ~ Sort ~ ")" | BfTerm }
+// SyGuSGTerm = { "(" ~ "Constant" ~ Sort ~ ")" | "(" ~ "Variable" ~ Sort ~ ")" | SyGuSBfTerm }
 impl SyGuSGTerm {
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, crate::parser::Error> {
         let inner_pairs = pair.into_inner().collect_vec();
@@ -187,8 +187,8 @@ impl SyGuSGTerm {
                 Ok(SyGuSGTerm::Variable(sort))
             }
             [bf_term_pair] => {
-                let bf_term = BfTerm::parse(bf_term_pair.clone())?;
-                Ok(SyGuSGTerm::BfTerm(bf_term))
+                let bf_term = SyGuSBfTerm::parse(bf_term_pair.clone())?;
+                Ok(SyGuSGTerm::SyGuSBfTerm(bf_term))
             }
             _ => unreachable!(
                 "Unexpected structure in SyGuSGTerm parsing: {:?}",

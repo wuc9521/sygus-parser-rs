@@ -4,6 +4,9 @@ SyGuSProg = { SOI ~ SyGuSCmd+ ~ EOI}
 // Auxiliary Lexical Categories
 WhiteSpaceChar = { "\u{09}" | "\u{0A}" | "\u{0D}" | "\u{20}" } // rewrite internal WHITESPACE.
 WHITESPACE     = _{ WhiteSpaceChar | "\t" | NEWLINE | COMMENT }
+
+// ! additional
+
 // 2.1 Comments
 COMMENT = _{ ";" ~ (!NEWLINE ~ ANY)* }
 
@@ -66,11 +69,11 @@ SyGuSTerm = {
 | "(" ~ "let" ~ "(" ~ VarBinding+ ~ SyGuSTerm ~ ")" ~ ")"
 }
 
-BfTerm = {
+SyGuSBfTerm = {
   Identifier
 | Literal
-| "(" ~ Identifier ~ BfTerm+ ~ ")"
-| "(" ~ "!" ~ BfTerm ~ Attribute+ ~ ")"
+| "(" ~ Identifier ~ SyGuSBfTerm+ ~ ")"
+| "(" ~ "!" ~ SyGuSBfTerm ~ Attribute+ ~ ")"
 }
 
 SortedVar = {  "(" ~ Symbol ~ Sort ~ ")"  }
@@ -87,46 +90,57 @@ SyGuSFeature = {
 
 // 2.9 Commands
 SyGuSCmd = {
-  AssumeCmd
-| CheckSynthCmd
-| ChcConstraintCmd
-| ConstraintCmd 
-| DeclareVarCmd
-| DeclareWeightCmd
-| InvConstraintCmd
-| OptimizeSynthCmd
-| SetFeatureCmd
-| SynthFunCmd
-| OracleCmd
-| SMTCmd
+  SyGuSCmdAssume
+| SyGuSCmdCheckSynth
+| SyGuSCmdChcConstraint
+| SyGuSCmdConstraint
+| SyGuSCmdDeclareVar
+| SyGuSCmdDeclareWeight
+| SyGuSCmdInvConstraint
+| SyGuSCmdOptimizeSynth
+| SyGuSCmdSetFeature
+| SyGuSCmdSynthFun
+| SyGuSCmdOracle
+| SyGuSCmdSMT
 }
 
-AssumeCmd = { "(" ~ "assume" ~ SyGuSTerm ~ ")"}
-CheckSynthCmd = { "(" ~ "check-synth" ~ ")" }
-ChcConstraintCmd = { "(" ~ "chc-constraint" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ SyGuSTerm ~ ")" }
-ConstraintCmd = { "(" ~ "constraint" ~ SyGuSTerm ~ ")" }
-DeclareVarCmd = { "(" ~ "declare-var" ~ Symbol ~ Sort ~ ")" }
-DeclareWeightCmd = { "(" ~ "declare-weight" ~ Symbol ~ Attribute* ~ ")" }
-InvConstraintCmd = { "(" ~ "inv-constraint" ~ Symbol{4} ~ ")" }
-OptimizeSynthCmd = { "(" ~ "optimize-synth" ~ "(" ~ SyGuSTerm* ~ ")" ~ Attribute* ~ ")" }
-SetFeatureCmd = { "(" ~ "set-feature" ~ SyGuSFeature ~ BoolConst ~ ")" }
-SynthFunCmd = { "(" ~ "synth-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ GrammarDef? ~ ")" }
+// auxiliary commands for SyGuSCmd
+SyGuSCmdAssume = { "(" ~ #SyGuSTkAssume="assume" ~ SyGuSTerm ~ ")" }
+SyGuSCmdCheckSynth = { "(" ~ #SyGuSTkCheckSynth="check-synth" ~ ")" }
+SyGuSCmdChcConstraint = {"(" ~ #SyGuSTkChcConstraint="chc-constraint" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ SyGuSTerm ~ ")" }
+SyGuSCmdConstraint = { "(" ~ #SyGuSTkConstraint="constraint" ~ SyGuSTerm ~ ")" }
+SyGuSCmdDeclareVar = { "(" ~ #SyGuSTkDeclareVar="declare-var" ~ Symbol ~ Sort ~ ")" }
+SyGuSCmdDeclareWeight = { "(" ~ #SyGuSTkDeclareWeight="declare-weight" ~ Symbol ~ Attribute* ~ ")" }
+SyGuSCmdInvConstraint = { "(" ~ #SyGuSTkInvConstaint="inv-constraint" ~ Symbol{4} ~ ")" }
+SyGuSCmdOptimizeSynth = { "(" ~ #SyGuSTkOptimizeSynth="optimize-synth" ~ "(" ~ SyGuSTerm* ~ ")" ~ Attribute* ~ ")" }
+SyGuSCmdSetFeature = {"(" ~ #SyGuSTkSetFeature="set-feature" ~ SyGuSFeature ~ BoolConst ~ ")" }
+SyGuSCmdSynthFun = {"(" ~ #SyGuSTkSynthFun="synth-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ GrammarDef? ~ ")" }
 
-OracleCmd = {
-  "(" ~ "oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"
-| "(" ~ "oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"
-| "(" ~ "declare-oracle-fun" ~ Symbol ~ "(" ~ Sort* ~ ")" ~ Sort ~ Symbol ~ ")"
-| "(" ~ "oracle-constraint-io" ~ Symbol{2} ~ ")"
-| "(" ~ "oracle-constraint-cex" ~ Symbol{2} ~ ")"
-| "(" ~ "oracle-constraint-membership" ~ Symbol{2} ~ ")"
-| "(" ~ "oracle-constraint-poswitness" ~ Symbol{2} ~ ")"
-| "(" ~ "oracle-constraint-negwitness" ~ Symbol{2} ~ ")"
-| "(" ~ "declare-correctness-oracle" ~ Symbol{2} ~ ")"
-| "(" ~ "declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"
+SyGuSCmdOracle = {
+  SyGuSCmdOracleAssume
+| SyGuSCmdOracleConstraint
+| SyGuSCmdDeclareOracleFun
+| SyGuSCmdOracleConstraintIO
+| SyGuSCmdOracleConstraintCex
+| SyGuSCmdOracleConstraintMembership
+| SyGuSCmdOracleConstraintPosWitness
+| SyGuSCmdOracleConstraintNegWitness
+| SyGuSCmdDeclareCorrectnessOracle
+| SyGuSCmdDeclareCorrectnessCexOracle
 }
 
+SyGuSCmdOracleAssume = {"(" ~ "oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
+SyGuSCmdOracleConstraint = {"(" ~ "oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
+SyGuSCmdDeclareOracleFun = {"(" ~ "declare-oracle-fun" ~ Symbol ~ "(" ~ Sort* ~ ")" ~ Sort ~ Symbol ~ ")"}
+SyGuSCmdOracleConstraintIO = {"(" ~ "oracle-constraint-io" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintCex = {"(" ~ "oracle-constraint-cex" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintMembership = {"(" ~ "oracle-constraint-membership" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintPosWitness = {"(" ~ "oracle-constraint-poswitness" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintNegWitness = {"(" ~ "oracle-constraint-negwitness" ~ Symbol{2} ~ ")"}
+SyGuSCmdDeclareCorrectnessOracle = {"(" ~ "declare-correctness-oracle" ~ Symbol{2} ~ ")"}
+SyGuSCmdDeclareCorrectnessCexOracle = {"(" ~ "declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"}
 
-SMTCmd = {
+SyGuSCmdSMT = {
   DeclareDatatypeCmd
 | DeclareDatatypesCmd
 | DeclareSortCmd
@@ -155,7 +169,7 @@ GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
 SyGuSGTerm = {
   "(" ~ "Constant" ~ Sort ~ ")"
 | "(" ~ "Variable" ~ Sort ~ ")"
-| BfTerm
+| SyGuSBfTerm
 }
 
 // borrowed from SMT-lib (doesn't exists in official syntax)
@@ -204,6 +218,7 @@ ReservedCommandName = {
 | "set-logic" 
 | "set-option"
 }
+
 PredefinedSymbol = {  // Predefined symbols
   "Bool" 
 | "continued-execution" 
@@ -221,6 +236,7 @@ PredefinedSymbol = {  // Predefined symbols
 | "unsupported" 
 | "unsat"
 }
+
 PredefinedKeyword = { // Predefined keywords
   ":" ~ "all-statistics" 
 | ":" ~ "assertion-stack-levels"
