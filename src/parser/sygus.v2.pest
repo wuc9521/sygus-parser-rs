@@ -43,12 +43,25 @@ Attribute = {
 | Keyword ~ AttributeValue
 }
 
-SExpr = { // borrowed from SMT-lib
+// ! borrowed from SMT-lib (not clearly defined in official syntax)
+AttributeValue = { SpecConstant | Symbol | "(" ~ SExpr* ~ ")" }
+
+// ! borrowed from SMT-lib (not defined in official syntax)
+SExpr = { 
   SpecConstant 
 | Symbol 
 | Reserved 
 | Keyword 
 | "(" ~ SExpr* ~ ")"
+}
+
+// ! borrowed from SMT-lib (not clearly defined in official syntax)
+SpecConstant  = { 
+  Numeral 
+| Decimal 
+| HexConst
+| BinConst
+| StringConst
 }
 
 
@@ -129,16 +142,16 @@ SyGuSCmdOracle = {
 | SyGuSCmdDeclareCorrectnessCexOracle
 }
 
-SyGuSCmdOracleAssume = {"(" ~ "oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
-SyGuSCmdOracleConstraint = {"(" ~ "oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
-SyGuSCmdDeclareOracleFun = {"(" ~ "declare-oracle-fun" ~ Symbol ~ "(" ~ Sort* ~ ")" ~ Sort ~ Symbol ~ ")"}
-SyGuSCmdOracleConstraintIO = {"(" ~ "oracle-constraint-io" ~ Symbol{2} ~ ")"}
-SyGuSCmdOracleConstraintCex = {"(" ~ "oracle-constraint-cex" ~ Symbol{2} ~ ")"}
-SyGuSCmdOracleConstraintMembership = {"(" ~ "oracle-constraint-membership" ~ Symbol{2} ~ ")"}
-SyGuSCmdOracleConstraintPosWitness = {"(" ~ "oracle-constraint-poswitness" ~ Symbol{2} ~ ")"}
-SyGuSCmdOracleConstraintNegWitness = {"(" ~ "oracle-constraint-negwitness" ~ Symbol{2} ~ ")"}
-SyGuSCmdDeclareCorrectnessOracle = {"(" ~ "declare-correctness-oracle" ~ Symbol{2} ~ ")"}
-SyGuSCmdDeclareCorrectnessCexOracle = {"(" ~ "declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleAssume = {"(" ~ #SyGuSTkOracleAssume="oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
+SyGuSCmdOracleConstraint = {"(" ~ #SyGuSTkOracleConstraint="oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
+SyGuSCmdDeclareOracleFun = {"(" ~ #SyGuSTkDeclareOracleFun="declare-oracle-fun" ~ Symbol ~ "(" ~ Sort* ~ ")" ~ Sort ~ Symbol ~ ")"}
+SyGuSCmdOracleConstraintIO = {"(" ~ #SyGuSTkOracleConstraintIO="oracle-constraint-io" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintCex = {"(" ~ #SyGuSTkOracleConstraintCex="oracle-constraint-cex" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintMembership = {"(" ~ #SyGuSTkOracleConstraintMembership="oracle-constraint-membership" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintPosWitness = {"(" ~ #SyGuSTkOracleConstraintPoswitness="oracle-constraint-poswitness" ~ Symbol{2} ~ ")"}
+SyGuSCmdOracleConstraintNegWitness = {"(" ~ #SyGuSTkOracleConstraintNegwitness="oracle-constraint-negwitness" ~ Symbol{2} ~ ")"}
+SyGuSCmdDeclareCorrectnessOracle = {"(" ~ #SyGuSTkDeclareCorrectnessOracle="declare-correctness-oracle" ~ Symbol{2} ~ ")"}
+SyGuSCmdDeclareCorrectnessCexOracle = {"(" ~ #SyGuSTkDeclareCorrectnessCexOracle="declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"}
 
 SyGuSCmdSMT = {
   DeclareDatatypeCmd
@@ -151,20 +164,22 @@ SyGuSCmdSMT = {
 | SetOptionCmd
 }
 
-DeclareDatatypeCmd = { "(" ~ "declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
-DeclareDatatypesCmd = { "(" ~ "declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
-DeclareSortCmd = { "(" ~ "declare-sort" ~ Symbol ~ Numeral ~ ")" }
-DefineFunCmd = { "(" ~ "define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
-DefineSortCmd = { "(" ~ "define-sort" ~ Symbol ~ Sort ~ ")" }
-SetInfoCmd = { "(" ~ "set-info" ~ Keyword ~ Literal ~ ")" }
-SetLogicCmd = { "(" ~ "set-logic" ~ Symbol ~ ")" }
-SetOptionCmd = { "(" ~ "set-option" ~ Keyword ~ Literal ~ ")" }
+DeclareDatatypeCmd = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
+DeclareDatatypesCmd = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
+DeclareSortCmd = { "(" ~ #SyGuSTkDeclareSort="declare-sort" ~ Symbol ~ Numeral ~ ")" }
+DefineFunCmd = { "(" ~ #SyGuSTkDefineFun="define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
+DefineSortCmd = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ Sort ~ ")" }
+SetInfoCmd = { "(" ~ #SyGuSTkSetInfo="set-info" ~ Keyword ~ Literal ~ ")" }
+SetLogicCmd = { "(" ~ #SyGuSTkSetLogic="set-logic" ~ Symbol ~ ")" }
+SetOptionCmd = { "(" ~ #SyGuSTkSetOption="set-option" ~ Keyword ~ Literal ~ ")" }
 
 SortDecl = { "(" ~ Symbol ~ Numeral ~ ")" }
 DTDecl = { "(" ~ DTConsDecl+ ~ ")" }
 DTConsDecl = { "(" ~ Symbol ~ SortedVar* ~ ")" }
-GrammarDef = { ("(" ~ SortedVar+ ~ ")")? ~ "(" ~ GroupedRuleList+ ~ ")" }
 // ! In standard version, the first half of grammardef cannot be removed.
+// ! But I see many implementations that allow this
+// ! I guess this is a dialect or something.
+GrammarDef = { ("(" ~ SortedVar+ ~ ")")? ~ "(" ~ GroupedRuleList+ ~ ")" }
 GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
 SyGuSGTerm = {
   "(" ~ "Constant" ~ Sort ~ ")"
@@ -172,15 +187,6 @@ SyGuSGTerm = {
 | SyGuSBfTerm
 }
 
-// borrowed from SMT-lib (doesn't exists in official syntax)
-AttributeValue = { SpecConstant | Symbol | "(" ~ SExpr* ~ ")" }
-SpecConstant  = { // Definition of AttributeValue is vague in SyGuS. So I borrowed from SMT-Lib
-  Numeral 
-| Decimal 
-| HexConst
-| BinConst
-| StringConst
-}
 Reserved = { ReservedGeneralWord | ReservedCommandName }
 ReservedGeneralWord = { // 
   "!" | "_" | "as" | "BINARY" | "DECIMAL" | "exists" | "HEXADECIMAL" | "forall" | "let" | "match" | "NUMERAL" | "par" | "STRING"
