@@ -8,11 +8,13 @@ use pest::iterators::Pair;
 pub type Identifier = String;
 pub type Symbol = String;
 
-// Identifier = {   Symbol   | "(" ~ "_"? ~ Symbol ~ Index+ ~ ")"
-// Symbol = @{ (ASCII_ALPHA | SpecialChar) ~ (ASCII_ALPHA | ASCII_DIGIT | SpecialChar)* }
-// SpecialChar = @{ "+" | "-" | "/" | "*" | "=" | "%" | "?" | "!" | "." | "$" | "_" | "~" | "&" | "^" | "<" | ">" | "@" }
-// Index = {  Numeral  | Symbol  }
-
+  
+/// Parses the input string to determine whether it conforms to a valid identifier format according to the SyGuS specification. 
+/// 
+/// 
+/// Checks first if the string qualifies as a valid symbol; if so, it is returned directly. 
+/// Otherwise, if the string is enclosed in parentheses, it splits the inner content into parts and validates that there is a proper symbol followed by one or more valid index elements. 
+/// When these conditions are met, a formatted identifier is returned; otherwise, it yields no result.
 pub fn parse_identifier(s: &str) -> Option<Identifier> {
     if parse_symbol(s).is_some() {
         return Some(s.to_string());
@@ -39,6 +41,9 @@ pub fn parse_identifier(s: &str) -> Option<Identifier> {
     None
 }
 
+/// Parses a string slice and determines whether it qualifies as a valid symbol. 
+///  
+/// Validates the input by ensuring it is non-empty and that every character is either an ASCII alphanumeric or one of the allowed special characters, returning the string as a symbol when valid and None otherwise.
 pub fn parse_symbol(s: &str) -> Option<Symbol> {
     if s.is_empty() {
         return None;
@@ -53,18 +58,29 @@ pub fn parse_symbol(s: &str) -> Option<Symbol> {
 
 // Numeral = @{"0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
 #[derive(Debug, Clone)]
+/// An enumeration representing an index, which defines two distinct variants for numeric and symbolic representations. 
+/// 
+/// 
+/// It offers a variant to encapsulate an unsigned integer as a numeral index and a variant to encapsulate a string as a symbolic index, facilitating flexible index representations in the parser's abstract syntax tree.
 pub enum Index {
     Numeral(usize),
     Symbol(String),
 }
 
 #[derive(Debug, Clone)]
+/// A sorted variable structure encapsulating an identifier and its corresponding type based on the SyGuS specification. 
+/// It pairs a string-based name with a sort value that defines the variable's type, enabling precise representation of variable declarations within SyGuS problems.
 pub struct SortedVar {
     pub name: String,
     pub sort: Sort,
 }
 
 impl SortedVar {
+    /// Parses a string slice into a sorted variable by validating and converting its textual representation according to the expected syntax. 
+    /// 
+    /// 
+    /// Invokes a parser for the sorted variable grammar, retrieves the first matching construct, and then converts the parsed pair into the corresponding structured representation. 
+    /// In case of failure during parsing or due to syntax mismatches, it returns a detailed error indicating the nature of the parsing issue.
     pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
         let pair = SyGuSParser::parse(Rule::SortedVar, s)?
             .next()
@@ -73,6 +89,13 @@ impl SortedVar {
             })?;
         SortedVar::parse(pair)
     }
+    /// Parses a sorted variable from a given parse tree node. 
+    /// 
+    /// The function processes a parse pair by extracting its inner pairs and verifying that they match the expected structure. 
+    /// 
+    /// 
+    /// Converts the first inner pair to a variable identifier and uses the sort parser to interpret the second pair as a sort. 
+    /// If the parse tree node contains exactly two inner pairs as expected, it returns the corresponding sorted variable; otherwise, it produces an error indicating invalid syntax.
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
@@ -90,18 +113,27 @@ impl SortedVar {
 }
 
 #[derive(Debug, Clone)]
+/// A structure representing a variable with a name and an associated sort. 
+/// It provides a straightforward interface for storing a variable's identifier alongside its designated type sort.
 pub struct Variable {
     pub name: String,
     pub sort: Sort,
 }
 
 #[derive(Debug, Clone)]
+/// A variable binding encapsulation that associates an identifier with a SyGuS term. 
+/// It exposes two fields: a string representing the variable's name and a boxed term that contains the corresponding SyGuS expression, serving as a component within the abstract syntax tree during parsing.
 pub struct VarBinding {
     pub name: String,
     pub term: Box<SyGuSTerm>,
 }
 
 impl VarBinding {
+    /// Converts a string representation into a variable binding instance. 
+    /// 
+    /// 
+    /// Attempts to parse the provided string as a variable binding and delegates further parsing to establish its internal structure. 
+    /// Returns a result containing the constructed instance or an error indicating invalid syntax if the string does not match the expected format.
     pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
         let pair = SyGuSParser::parse(Rule::VarBinding, s)?
             .next()
@@ -111,6 +143,8 @@ impl VarBinding {
         VarBinding::parse(pair)
     }
     // VarBinding = { "(" ~ Symbol ~ SyGuSTerm ~ ")" }
+    /// Parses a variable binding from a parsed pest pair into a structured instance. 
+    /// This function accepts a pair from the pest parser representing a variable binding, extracts the symbol and its associated term, and returns a new instance upon successful parsing while delegating errors to the caller.
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
@@ -128,6 +162,8 @@ impl VarBinding {
 }
 
 #[derive(Debug, Clone)]
+/// Represents a literal value parsed from a SyGuS problem, encapsulating various constant forms. 
+/// This enumeration distinguishes between numeric types, booleans, and textual constants by providing variants for integers, decimals, booleans, hexadecimal constants, binary constants, and string constants.
 pub enum Literal {
     Numeral(i64),
     Decimal(f64),
@@ -138,6 +174,10 @@ pub enum Literal {
 }
 
 impl Literal {
+    /// Converts a string slice into a literal value based on its content.
+    /// 
+    /// Evaluates the provided input by attempting to interpret it as different literal types, starting with a signed integer and then a floating-point number. 
+    /// It then checks for boolean values, recognizes hexadecimal and binary representations prefixed with "#x" and "#b" respectively, and falls back to treating the input as a string constant if none of the prior cases apply.
     pub fn from_str(s: &str) -> Self {
         if let Ok(num) = s.parse::<i64>() {
             return Literal::Numeral(num);
@@ -163,12 +203,19 @@ impl Literal {
 
 // Attribute = { Keyword  | Keyword ~ AttributeValue }
 #[derive(Debug, Clone)]
+/// A structure representing an attribute, associating a keyword with an optional value. 
+/// It encapsulates a string-based keyword that identifies the attribute and an optional value providing additional context or specification, facilitating flexible attribute representation as required by the SyGuS standard.
 pub struct Attribute {
     pub keyword: String,
     pub value: Option<AttributeValue>,
 }
 
 impl Attribute {
+    /// Converts a string slice into a parsed attribute, returning either the parsed attribute or a parsing error. 
+    /// 
+    /// 
+    /// Processes a string representing an attribute according to the SyGuS syntax by invoking the parser with the corresponding rule, then hands off the resulting pair to further parsing. 
+    /// It returns a result type wrapping either the successfully constructed attribute or an error describing the encountered syntax issue.
     pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
         let pair = SyGuSParser::parse(Rule::Attribute, s)?
             .next()
@@ -180,6 +227,11 @@ impl Attribute {
     // AttributeValue = { SpecConstant | Symbol | "(" ~ SExpr* ~ ")" }
     // SExpr = { // borrowed from SMT-lib
     // SpecConstant  | Symbol | Reserved  | Keyword  | "(" ~ SExpr* ~ ")" }
+    /// Parses the input pair into an attribute structure by validating that it comprises a single keyword element without an associated value. 
+    /// 
+    /// 
+    /// Checks the inner components of the pair and, if exactly one element matching a keyword is present, creates an attribute instance initialized with that keyword and no additional value. 
+    /// Otherwise, it returns an error indicating that the syntax does not meet the expected format for an attribute.
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
@@ -199,6 +251,8 @@ impl Attribute {
 }
 
 #[derive(Debug, Clone)]
+/// Represents a possible attribute value extracted from a parsed SyGuS problem. 
+/// It encapsulates three kinds of values: a literal constant specification, a symbolic identifier, or a list of S-expression elements, enabling robust and type-safe handling of attribute values in the abstract syntax tree.
 pub enum AttributeValue {
     SpecConstant(Literal),
     Symbol(String),
@@ -206,6 +260,11 @@ pub enum AttributeValue {
 }
 
 #[derive(Debug, Clone)]
+/// Enumeration representing a symbolic expression for SyGuS parsing that encapsulates various expression components. 
+/// 
+/// 
+/// Defines distinct variants to represent a literal constant, a symbol identifier, a reserved string, a keyword, and a nested list of symbolic expressions. 
+/// This facilitates structured representation of parsed expressions and enables handling of both atomic and compound constructs within the SyGuS language.
 pub enum SExpr {
     SpecConstant(Literal),
     Symbol(String),

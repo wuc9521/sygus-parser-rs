@@ -7,6 +7,10 @@ use pest::iterators::Pair;
 use pest::Parser; // important for ::parse method.
 
 #[derive(Debug, Clone)]
+/// Represents an enumeration of features supported by the SyGuS specification. 
+/// 
+/// 
+/// Provides variants for enabling or indicating support for different syntactic and semantic capabilities such as grammars, forward declarations, recursion, oracles, and weights, which facilitate detailed control over the synthesis process within SyGuS problem files.
 pub enum SyGuSFeature {
     Grammars,
     FwdDecls,
@@ -19,12 +23,16 @@ type DTConsDecl = (String, Vec<SortedVar>);
 type DTDecl = Vec<DTConsDecl>;
 
 #[derive(Debug, Clone)]
+/// A structure that holds sort declaration information. 
+/// It contains a field for the sort's identifier and another for its arity, allowing users to capture the essential properties of a sort in a concise manner.
 pub struct SortDecl {
     pub symbol: String,
     pub arity: usize,
 }
 
 #[derive(Debug, Clone)]
+/// Represents the set of available commands for specifying and processing SyGuS problems. 
+/// This item encapsulates command variants including assumptions on terms, synthesis checks, constraints, variable and weight declarations, invariant constraints, and optimized synthesis directives, as well as commands that set features, logics, synthesis functions with optional grammars, and integrate both Oracle and SMT specific instructions.
 pub enum SyGuSCmd {
     Assume(SyGuSTerm),
     CheckSynth,
@@ -42,6 +50,11 @@ pub enum SyGuSCmd {
 }
 
 #[derive(Debug, Clone)]
+/// This code defines an interface representing various oracle commands used to express oracle-related operations in SyGuS problems. 
+/// Each variant encapsulates a specific kind of oracle command, capturing the parameters required to represent assumptions, constraints, and declarations related to oracle functionality.
+/// 
+/// The first two variants support commands that express assumptions and constraints through lists of sorted variables, a term, and an associated identifier. 
+/// Additional variants facilitate the declaration of oracle functions, handling of I/O commands, counterexample-based constraints, membership tests, and witness constraints, as well as commands for asserting oracle correctness.
 pub enum OracleCmd {
     OracleAssume(Vec<SortedVar>, Vec<SortedVar>, SyGuSTerm, String),
     OracleConstraint(Vec<SortedVar>, Vec<SortedVar>, SyGuSTerm, String),
@@ -56,6 +69,11 @@ pub enum OracleCmd {
 }
 
 impl OracleCmd {
+    /// Converts a string slice into a structured oracle command result. 
+    /// 
+    /// This method takes an input string, applies the parsing rule for oracle commands, and converts the obtained parse tree into a corresponding oracle command object. 
+    /// If the input does not conform to the expected format, it returns an error detailing the parsing issue.
+    /// 
     pub fn from_str(input: &str) -> Result<OracleCmd, SyGuSParseError> {
         let [cmd]: [_; 1] = SyGuSParser::parse(Rule::SyGuSCmdOracle, input)?
             .collect_vec()
@@ -63,6 +81,11 @@ impl OracleCmd {
             .unwrap();
         OracleCmd::parse(cmd)
     }
+    /// Parses a Pest pair representation into an oracle command variant according to the SyGuS specification. 
+    /// 
+    /// This function analyzes the input pair by matching the underlying rule and then translates it into one of several supported command variants such as oracle assume, oracle constraint, declare oracle function, and various correctness or witness constraints. 
+    /// It returns the corresponding oracle command on successful matching, or an error describing an invalid syntax if the input does not conform to any recognized form.
+    /// 
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let inner = pair.clone().into_inner().collect_vec();
         match inner.as_slice() {
@@ -206,6 +229,11 @@ impl OracleCmd {
 }
 
 #[derive(Debug, Clone)]
+/// This enumeration encapsulates commands related to SMT processing, facilitating the specification of various SMT actions. 
+/// 
+/// It supports operations such as declaring datatypes and sorts, defining functions and sorts, and configuring SMT options like logic, information, or additional parameters. 
+/// Each variant represents a distinct command interface used to express the corresponding SMT directive within the parsing framework.
+/// 
 pub enum SMTCmd {
     DeclareDatatype(String, DTDecl),
     DeclareDatatypes(Vec<SortDecl>, Vec<DTDecl>),
@@ -218,6 +246,10 @@ pub enum SMTCmd {
 }
 
 impl SMTCmd {
+    /// Constructs an SMT command from its string representation. 
+    /// 
+    /// 
+    /// Parses the given input string according to the corresponding syntax rule and returns either the successfully constructed SMT command or a parse error.
     pub fn from_str(input: &str) -> Result<SMTCmd, SyGuSParseError> {
         let [cmd]: [_; 1] = SyGuSParser::parse(Rule::SyGuSCmdSMT, input)?
             .collect_vec()
@@ -225,6 +257,12 @@ impl SMTCmd {
             .unwrap();
         SMTCmd::parse(cmd)
     }
+    /// Parses a pest parse tree pair into an SMT command. 
+    /// 
+    /// This function inspects the rule associated with the input pair and returns a corresponding SMT command variant based on the recognized input construct. 
+    /// It handles various command types such as datatype declarations, function and sort definitions, setting information, logic, and options, delegating parsing tasks to the appropriate helper methods for inner tokens. 
+    /// On encountering an unexpected rule, it returns a parsing error, ensuring robust handling of invalid syntax.
+    /// 
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         let smt_cmd = match pair.as_rule() {
             Rule::DeclareDatatypeCmd => {
@@ -342,11 +380,17 @@ impl SMTCmd {
 }
 
 #[derive(Debug, Clone)]
+/// This struct serves as a container for the commands parsed from a SyGuS problem file. 
+/// It encapsulates a public vector of command representations, allowing further processing or analysis of the parsed input.
 pub struct SyGuSFile {
     pub cmds: Vec<SyGuSCmd>,
 }
 
 impl fmt::Display for SyGuSFile {
+    /// Formats an instance by iterating over its collection of commands and writing each command’s debug representation to a formatter. 
+    /// 
+    /// 
+    /// Invokes a loop that processes each command, formatting it using the debug trait and appending a newline after each entry before concluding with a successful formatting result.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for cmd in &self.cmds {
             write!(f, "{:?}\n", cmd)?;
@@ -356,9 +400,16 @@ impl fmt::Display for SyGuSFile {
 }
 
 impl SyGuSFile {
+    /// Creates and returns a new instance of the abstract syntax tree file container. 
+    /// This function initializes the structure with an empty collection of commands, providing a clean slate for subsequently adding parsed instructions from a SyGuS problem file.
     pub fn new() -> Self {
         SyGuSFile { cmds: Vec::new() }
     }
+    /// Parses a SyGuS problem file from a string input and returns its parsed representation. 
+    /// 
+    /// This function leverages the underlying parser to decode the problem specification by first extracting a single parsed file unit and then iterating through the commands it contains, excluding any end-of-input markers. 
+    /// Each command is successively parsed and accumulated into the overall representation, with any parsing errors propagated appropriately.
+    /// 
     pub fn from_str(input: &str) -> Result<SyGuSFile, SyGuSParseError> {
         let [file]: [_; 1] = SyGuSParser::parse(Rule::SyGuSProg, input)?
             .collect_vec()
@@ -374,6 +425,11 @@ impl SyGuSFile {
 }
 
 impl SyGuSCmd {
+    /// Parses an input string into a SyGuS command representation. 
+    /// 
+    /// 
+    /// Transforms a string input by applying the SyGuS parser with the appropriate rule and then delegating to the command parsing logic. 
+    /// Returns a successfully parsed command or an error if the input does not adhere to the expected syntax.
     pub fn from_str(input: &str) -> Result<SyGuSCmd, SyGuSParseError> {
         let [cmd]: [_; 1] = SyGuSParser::parse(Rule::SyGuSCmd, input)?
             .collect_vec()
@@ -381,6 +437,12 @@ impl SyGuSCmd {
             .unwrap();
         SyGuSCmd::parse(cmd)
     }
+    /// Parses an input pair from the syntax parser into its corresponding command representation as defined by the SyGuS specification. 
+    ///  
+    /// 
+    /// Inspects the provided pair, matches it against established grammar rules, and converts it into the associated command variant. 
+    /// It handles a range of commands—such as assume, check-synth, constraint, declare-var, optimize-synth, set-feature, synth-fun, SMT commands, and oracle commands—by extracting the necessary components from the inner tokens. 
+    /// In the event of encountering an unsupported or unknown rule, it returns a parsing error, ensuring that only valid SyGuS commands are produced.
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
         println!("SyGuSCmd: {:?}", pair);
         match pair.as_rule() {

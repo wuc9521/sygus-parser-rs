@@ -17,6 +17,12 @@ struct Args {
     verbose: bool,
 }
 
+/// Runs an application that parses a SyGuS input file and outputs either a detailed or minimal representation of the parsed problem. 
+/// 
+/// 
+/// Processes command-line arguments to determine the file path for the SyGuS input and whether verbose output is enabled, reads the file content, and attempts to parse it according to the SyGuS v2.1 standard. 
+/// In the event of errors during file reading or parsing, it provides appropriate error messages before terminating. 
+/// When parsing succeeds, it conditionally prints detailed information if verbosity is enabled, or prompts the user to enable verbose mode.
 fn main() -> Result<(), Box<dyn Error>> {
     // Parse command line arguments
     let args = Args::parse();
