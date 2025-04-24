@@ -29,7 +29,7 @@ SpecialChar = @{ "+" | "-" | "/" | "*" | "=" | "%" | "?" | "!" | "." | "$" | "_"
 // 2.4 Identifier
 Identifier = { 
   Symbol 
-| "(" ~ "_"? ~ Symbol ~ Index+ ~ ")" 
+| "(" ~ "_" ~ Symbol ~ Index+ ~ ")" 
 // ! In the standard version, underline cannot be ignored { "(" ~ "_" ~ Symbol ~ Index+ ~ ")" }
 }
 Index = { 
@@ -114,7 +114,17 @@ SyGuSCmd = {
 | SyGuSCmdSetFeature
 | SyGuSCmdSynthFun
 | SyGuSCmdOracle
-| SyGuSCmdSMT
+// | SyGuSCmdSMT  =======================================================
+| DeclareDatatypeCmd
+| DeclareDatatypesCmd
+| DeclareSortCmd
+| DefineFunCmd
+| DefineSortCmd
+| SetInfoCmd
+| SetLogicCmd
+| SetOptionCmd
+//  ======================================================================
+
 }
 
 // auxiliary commands for SyGuSCmd
@@ -153,16 +163,16 @@ SyGuSCmdOracleConstraintNegWitness = {"(" ~ #SyGuSTkOracleConstraintNegwitness="
 SyGuSCmdDeclareCorrectnessOracle = {"(" ~ #SyGuSTkDeclareCorrectnessOracle="declare-correctness-oracle" ~ Symbol{2} ~ ")"}
 SyGuSCmdDeclareCorrectnessCexOracle = {"(" ~ #SyGuSTkDeclareCorrectnessCexOracle="declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"}
 
-SyGuSCmdSMT = {
-  DeclareDatatypeCmd
-| DeclareDatatypesCmd
-| DeclareSortCmd
-| DefineFunCmd
-| DefineSortCmd
-| SetInfoCmd
-| SetLogicCmd
-| SetOptionCmd
-}
+// SyGuSCmdSMT = {
+//   DeclareDatatypeCmd
+// | DeclareDatatypesCmd
+// | DeclareSortCmd
+// | DefineFunCmd
+// | DefineSortCmd
+// | SetInfoCmd
+// | SetLogicCmd
+// | SetOptionCmd
+// }
 
 DeclareDatatypeCmd = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
 DeclareDatatypesCmd = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }

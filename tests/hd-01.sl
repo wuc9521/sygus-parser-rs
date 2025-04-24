@@ -3,10 +3,10 @@
 
 (set-logic BV)
 
-(define-fun hd01 ((x (BitVec 64))) (BitVec 64) (bvand x (bvsub x #x0000000000000001)))
+(define-fun hd01 ((x (_ BitVec 64))) (_ BitVec 64) (bvand x (bvsub x #x0000000000000001)))
 
-(synth-fun f ((x (BitVec 64))) (BitVec 64) (
-    (Start  (BitVec 64) (
+(synth-fun f ((x (_ BitVec 64))) (_ BitVec 64) (
+    (Start  (_ BitVec 64) (
             (bvnot Start)
             (bvxor Start Start)
             (bvand Start Start)
@@ -36,6 +36,6 @@
     )
 ))
 
-(declare-var x (BitVec 64))
+(declare-var x (_ BitVec 64))
 (constraint (= (hd01 x) (f x)))
 (check-synth)
