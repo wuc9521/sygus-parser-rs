@@ -7,7 +7,7 @@ use pest::iterators::Pair;
 
 use itertools::Itertools;
 
-#[derive(Debug, Clone, Display, PartialEq)]
+#[derive(Debug, Clone, Display, PartialEq, Eq, Hash)]
 /// Represents an abstract sort used in the SyGuS language specification.
 /// This type differentiates between a simple sort, defined solely by an identifier, and a parameterized sort that couples an identifier with a collection of sub-sorts.
 pub enum Sort {

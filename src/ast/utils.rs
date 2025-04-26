@@ -8,10 +8,14 @@ use pest::iterators::Pair;
 
 pub type Symbol = String;
 
-#[derive(Debug, Clone, Display, PartialEq, Eq)]
+#[derive(Debug, Clone, Display, PartialEq, Eq, Hash)]
 pub enum Identifier {
     Symbol(Symbol),
-    #[display(fmt = "({} {})", _0, "_1.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(\" \")")]
+    #[display(
+        fmt = "({} {})",
+        _0,
+        "_1.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(\" \")"
+    )]
     Indexed(Symbol, Vec<Index>),
 }
 
@@ -44,9 +48,11 @@ impl Identifier {
         }
     }
     pub fn from_str(s: &str) -> Result<Self, SyGuSParseError> {
-        let pair = SyGuSParser::parse(Rule::Identifier, s)?.next().ok_or_else(|| {
-            SyGuSParseError::InvalidSyntax(format!("Failed to parse Identifier: {}", s))
-        })?;
+        let pair = SyGuSParser::parse(Rule::Identifier, s)?
+            .next()
+            .ok_or_else(|| {
+                SyGuSParseError::InvalidSyntax(format!("Failed to parse Identifier: {}", s))
+            })?;
         Identifier::parse(pair)
     }
 }
@@ -97,7 +103,7 @@ fn is_special_char(c: char) -> bool {
 }
 
 // Numeral = @{"0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*}
-#[derive(Debug, Clone, Display, PartialEq, Eq)]
+#[derive(Debug, Clone, Display, PartialEq, Eq, Hash)]
 /// An enumeration representing an index, which defines two distinct variants for numeric and symbolic representations.
 ///
 ///

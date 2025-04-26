@@ -113,21 +113,30 @@ SyGuSCmd = {
 | SyGuSCmdOptimizeSynth
 | SyGuSCmdSetFeature
 | SyGuSCmdSynthFun
-| SyGuSCmdOracle
-// | SyGuSCmdSMT  =======================================================
-| DeclareDatatypeCmd
-| DeclareDatatypesCmd
-| DeclareSortCmd
-| DefineFunCmd
-| DefineSortCmd
-| SetInfoCmd
-| SetLogicCmd
-| SetOptionCmd
+// SyGuSCmdOracle =======================================================
+| SyGuSCmdOracleAssume
+| SyGuSCmdOracleConstraint
+| SyGuSCmdDeclareOracleFun
+| SyGuSCmdOracleConstraintIO
+| SyGuSCmdOracleConstraintCex
+| SyGuSCmdOracleConstraintMembership
+| SyGuSCmdOracleConstraintPosWitness
+| SyGuSCmdOracleConstraintNegWitness
+| SyGuSCmdDeclareCorrectnessOracle
+| SyGuSCmdDeclareCorrectnessCexOracle
+// SyGuSCmdSMT  =======================================================
+| SyGuSCmdDeclareDatatype
+| SyGuSCmdDeclareDatatypes
+| SyGuSCmdDeclareSort
+| SyGuSCmdDefineFun
+| SyGuSCmdDefineSort
+| SyGuSCmdSetInfo
+| SyGuSCmdSetLogic
+| SyGuSCmdSetOption
 //  ======================================================================
 
 }
 
-// auxiliary commands for SyGuSCmd
 SyGuSCmdAssume = { "(" ~ #SyGuSTkAssume="assume" ~ SyGuSTerm ~ ")" }
 SyGuSCmdCheckSynth = { "(" ~ #SyGuSTkCheckSynth="check-synth" ~ ")" }
 SyGuSCmdChcConstraint = {"(" ~ #SyGuSTkChcConstraint="chc-constraint" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ SyGuSTerm ~ ")" }
@@ -138,19 +147,6 @@ SyGuSCmdInvConstraint = { "(" ~ #SyGuSTkInvConstaint="inv-constraint" ~ Symbol{4
 SyGuSCmdOptimizeSynth = { "(" ~ #SyGuSTkOptimizeSynth="optimize-synth" ~ "(" ~ SyGuSTerm* ~ ")" ~ Attribute* ~ ")" }
 SyGuSCmdSetFeature = {"(" ~ #SyGuSTkSetFeature="set-feature" ~ SyGuSFeature ~ BoolConst ~ ")" }
 SyGuSCmdSynthFun = {"(" ~ #SyGuSTkSynthFun="synth-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ GrammarDef? ~ ")" }
-
-SyGuSCmdOracle = {
-  SyGuSCmdOracleAssume
-| SyGuSCmdOracleConstraint
-| SyGuSCmdDeclareOracleFun
-| SyGuSCmdOracleConstraintIO
-| SyGuSCmdOracleConstraintCex
-| SyGuSCmdOracleConstraintMembership
-| SyGuSCmdOracleConstraintPosWitness
-| SyGuSCmdOracleConstraintNegWitness
-| SyGuSCmdDeclareCorrectnessOracle
-| SyGuSCmdDeclareCorrectnessCexOracle
-}
 
 SyGuSCmdOracleAssume = {"(" ~ #SyGuSTkOracleAssume="oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
 SyGuSCmdOracleConstraint = {"(" ~ #SyGuSTkOracleConstraint="oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
@@ -163,25 +159,15 @@ SyGuSCmdOracleConstraintNegWitness = {"(" ~ #SyGuSTkOracleConstraintNegwitness="
 SyGuSCmdDeclareCorrectnessOracle = {"(" ~ #SyGuSTkDeclareCorrectnessOracle="declare-correctness-oracle" ~ Symbol{2} ~ ")"}
 SyGuSCmdDeclareCorrectnessCexOracle = {"(" ~ #SyGuSTkDeclareCorrectnessCexOracle="declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"}
 
-// SyGuSCmdSMT = {
-//   DeclareDatatypeCmd
-// | DeclareDatatypesCmd
-// | DeclareSortCmd
-// | DefineFunCmd
-// | DefineSortCmd
-// | SetInfoCmd
-// | SetLogicCmd
-// | SetOptionCmd
-// }
 
-DeclareDatatypeCmd = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
-DeclareDatatypesCmd = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
-DeclareSortCmd = { "(" ~ #SyGuSTkDeclareSort="declare-sort" ~ Symbol ~ Numeral ~ ")" }
-DefineFunCmd = { "(" ~ #SyGuSTkDefineFun="define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
-DefineSortCmd = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ Sort ~ ")" }
-SetInfoCmd = { "(" ~ #SyGuSTkSetInfo="set-info" ~ Keyword ~ Literal ~ ")" }
-SetLogicCmd = { "(" ~ #SyGuSTkSetLogic="set-logic" ~ Symbol ~ ")" }
-SetOptionCmd = { "(" ~ #SyGuSTkSetOption="set-option" ~ Keyword ~ Literal ~ ")" }
+SyGuSCmdDeclareDatatype = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
+SyGuSCmdDeclareDatatypes = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
+SyGuSCmdDeclareSort = { "(" ~ #SyGuSTkDeclareSort="declare-sort" ~ Symbol ~ Numeral ~ ")" }
+SyGuSCmdDefineFun = { "(" ~ #SyGuSTkDefineFun="define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
+SyGuSCmdDefineSort = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ Sort ~ ")" }
+SyGuSCmdSetInfo = { "(" ~ #SyGuSTkSetInfo="set-info" ~ Keyword ~ Literal ~ ")" }
+SyGuSCmdSetLogic = { "(" ~ #SyGuSTkSetLogic="set-logic" ~ Symbol ~ ")" }
+SyGuSCmdSetOption = { "(" ~ #SyGuSTkSetOption="set-option" ~ Keyword ~ Literal ~ ")" }
 
 SortDecl = { "(" ~ Symbol ~ Numeral ~ ")" }
 DTDecl = { "(" ~ DTConsDecl+ ~ ")" }
