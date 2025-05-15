@@ -11,13 +11,13 @@ use itertools::Itertools;
 /// Represents an abstract sort used in the SyGuS language specification.
 /// This type differentiates between a simple sort, defined solely by an identifier, and a parameterized sort that couples an identifier with a collection of sub-sorts.
 pub enum Sort {
-    #[display(fmt = "{}", _0)]
+    #[display(fmt = "{}", "_0.to_string()")]
     Simple(Identifier),
 
     #[display(
         fmt = "({} {})",
         _0,
-        "_1.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(\" \")"
+        "_1.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \")"
     )]
     Parameterized(Identifier, Vec<Sort>),
 }

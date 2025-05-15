@@ -55,6 +55,12 @@ impl Identifier {
             })?;
         Identifier::parse(pair)
     }
+    pub fn get_name(&self) -> &str {
+        match self {
+            Identifier::Symbol(symbol) => symbol,
+            Identifier::Indexed(symbol, _) => symbol,
+        }
+    }
 }
 
 /// Parses a string slice and determines whether it qualifies as a valid symbol.

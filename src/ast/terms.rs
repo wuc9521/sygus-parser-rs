@@ -256,6 +256,14 @@ impl SyGuSBfTerm {
             ))),
         }
     }
+
+    pub fn get_name(&self) -> Option<&str> {
+        match self {
+            SyGuSBfTerm::Identifier(id) => Some(id.get_name()),
+            SyGuSBfTerm::Application(id, _) => Some(id.get_name()),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Display)]
