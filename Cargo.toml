@@ -1,6 +1,6 @@
 [package]
 name = "sygus-parser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Chentian Wu <wuc9521@gmail.com>"]
 description = "A Rust parser for the SyGuS format"
