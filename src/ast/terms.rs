@@ -45,7 +45,7 @@ pub enum SyGuSTerm {
     Forall(Vec<SortedVar>, Box<SyGuSTerm>),
 
     #[display(
-        fmt = "(let {} {})",
+        fmt = "(let ({}) {})",
         "_0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(\" \")",
         _1
     )] // ("let" "(" VarBinding+ ")" SyGuSTerm)
@@ -97,7 +97,6 @@ impl SyGuSTerm {
 
         // Process the actual SyGuSTerm
         let inner_pairs = term_pair.into_inner().collect_vec();
-
         match inner_pairs.as_slice() {
             [pair] if pair.as_rule() == Rule::Identifier => Ok(SyGuSTerm::Identifier(
                 Identifier::from_str(pair.as_str()).unwrap(),
@@ -131,35 +130,37 @@ impl SyGuSTerm {
             }
 
             // Handle Exists ("exists" "(" SortedVar+ ")" SyGuSTerm)
-            [exists, vars_container, term_pair] if exists.as_str() == "exists" => {
-                let sorted_vars = <Pair<'_, Rule> as Clone>::clone(&vars_container)
-                    .into_inner()
-                    .map(|p| SortedVar::parse(p))
-                    .collect::<Result<Vec<_>, _>>()?;
-
+            [exists, vars @ .., term_pair] if exists.as_str() == "exists" => {
+                let mut sorted_vars = Vec::new();
+                for var in vars {
+                    if var.as_rule() == Rule::SortedVar {
+                        sorted_vars.push(SortedVar::parse(var.clone())?);
+                    }
+                }
                 let term = SyGuSTerm::parse(term_pair.clone())?;
-
                 Ok(SyGuSTerm::Exists(sorted_vars, Box::new(term)))
             }
 
             // Handle Forall ("forall" "(" SortedVar+ ")" SyGuSTerm)
-            [forall, vars_container, term_pair] if forall.as_str() == "forall" => {
-                let sorted_vars = <Pair<'_, Rule> as Clone>::clone(&vars_container)
-                    .into_inner()
-                    .map(|p| SortedVar::parse(p))
-                    .collect::<Result<Vec<_>, _>>()?;
-
+            [forall, vars @ .., term_pair] if forall.as_str() == "forall" => {
+                let mut sorted_vars = Vec::new();
+                for var in vars {
+                    if var.as_rule() == Rule::SortedVar {
+                        sorted_vars.push(SortedVar::parse(var.clone())?);
+                    }
+                }
                 let term = SyGuSTerm::parse(term_pair.clone())?;
-
                 Ok(SyGuSTerm::Forall(sorted_vars, Box::new(term)))
             }
 
             // Handle Let ("let" "(" VarBinding+ ")" SyGuSTerm)
-            [let_keyword, bindings_container, term_pair] if let_keyword.as_str() == "let" => {
-                let var_bindings = <Pair<'_, Rule> as Clone>::clone(&bindings_container)
-                    .into_inner()
-                    .map(|p| VarBinding::parse(p))
-                    .collect::<Result<Vec<_>, _>>()?;
+            [let_, bindings @ .., term_pair] if let_.as_str() == "let" => {
+                let mut var_bindings = Vec::new();
+                for binding in bindings {
+                    if binding.as_rule() == Rule::VarBinding {
+                        var_bindings.push(VarBinding::parse(binding.clone())?);
+                    }
+                }
                 let term = SyGuSTerm::parse(term_pair.clone())?;
                 Ok(SyGuSTerm::Let(var_bindings, Box::new(term)))
             }
@@ -277,7 +278,7 @@ pub enum SyGuSGTerm {
     #[display(fmt = "{}", _0)] // Sort
     Variable(Sort),
     #[display(fmt = "{}", _0)] // SyGuSBfTerm
-    SyGuSBfTerm(SyGuSBfTerm),
+    SyGuSTerm(SyGuSTerm),
 }
 
 // SyGuSGTerm = { "(" ~ "Constant" ~ Sort ~ ")" | "(" ~ "Variable" ~ Sort ~ ")" | SyGuSBfTerm }
@@ -311,9 +312,9 @@ impl SyGuSGTerm {
                 let sort = Sort::parse(inner_pairs[1].clone())?;
                 Ok(SyGuSGTerm::Variable(sort))
             }
-            [bf_term_pair] => {
-                let bf_term = SyGuSBfTerm::parse(bf_term_pair.clone())?;
-                Ok(SyGuSGTerm::SyGuSBfTerm(bf_term))
+            [term_pair] => {
+                let sygus_term = SyGuSTerm::parse(term_pair.clone())?;
+                Ok(SyGuSGTerm::SyGuSTerm(sygus_term))
             }
             _ => Err(SyGuSParseError::InvalidSyntax(format!(
                 "Unexpected structure in SyGuSGTerm parsing: {:?}",

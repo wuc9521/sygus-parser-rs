@@ -349,7 +349,6 @@ impl SyGuSCmd {
                 for inner_cmd in inner {
                     match inner_cmd.as_rule() {
                         Rule::SortedVar => {
-                            // let sorted_var = SortedVar::parse(inner_cmd);
                             sorted_var_list.push(SortedVar::parse(inner_cmd).unwrap());
                         }
                         Rule::Sort => {

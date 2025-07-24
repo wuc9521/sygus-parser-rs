@@ -250,14 +250,14 @@ impl VarBinding {
 /// This enumeration distinguishes between numeric types, booleans, and textual constants by providing variants for integers, decimals, booleans, hexadecimal constants, binary constants, and string constants.
 pub enum Literal {
     #[display(fmt = "{}", _0)]
-    Numeral(i64),
+    Numeral(usize),
     #[display(fmt = "{}", _0)]
     Decimal(f64),
     #[display(fmt = "{}", _0)]
     Bool(bool),
-    #[display(fmt = "{}", _0)]
+    #[display(fmt = "#x{}", _0)]
     HexConst(String),
-    #[display(fmt = "{}", _0)]
+    #[display(fmt = "#b{}", _0)]
     BinConst(String),
     #[display(fmt = "{}", _0)]
     StringConst(String),
@@ -269,7 +269,7 @@ impl Literal {
     /// Evaluates the provided input by attempting to interpret it as different literal types, starting with a signed integer and then a floating-point number.
     /// It then checks for boolean values, recognizes hexadecimal and binary representations prefixed with "#x" and "#b" respectively, and falls back to treating the input as a string constant if none of the prior cases apply.
     pub fn from_str(s: &str) -> Self {
-        if let Ok(num) = s.parse::<i64>() {
+        if let Ok(num) = s.parse::<usize>() {
             return Literal::Numeral(num);
         }
         if let Ok(num) = s.parse::<f64>() {

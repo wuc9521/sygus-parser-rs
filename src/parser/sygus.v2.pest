@@ -76,11 +76,16 @@ SyGuSTerm = {
   Identifier
 | Literal
 | "(" ~ Identifier ~ SyGuSTerm+ ~ ")"
-| "(" ~ "!" ~ SyGuSTerm ~ Attribute+ ~ ")" 
-| "(" ~ "exists" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
-| "(" ~ "forall" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
-| "(" ~ "let" ~ "(" ~ VarBinding+ ~ SyGuSTerm ~ ")" ~ ")"
+| "(" ~ BANG ~ SyGuSTerm ~ Attribute+ ~ ")" 
+| "(" ~ EXISTS ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ FORALL ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ LET ~ "(" ~ VarBinding+ ~ SyGuSTerm ~ ")" ~ ")"
 }
+
+BANG = { "!" }
+EXISTS = { "exists" }
+FORALL = { "forall" }
+LET = { "let" }
 
 SyGuSBfTerm = {
   Identifier
@@ -180,7 +185,7 @@ GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
 SyGuSGTerm = {
   "(" ~ "Constant" ~ Sort ~ ")"
 | "(" ~ "Variable" ~ Sort ~ ")"
-| SyGuSBfTerm
+| SyGuSTerm
 }
 
 Reserved = { ReservedGeneralWord | ReservedCommandName }
