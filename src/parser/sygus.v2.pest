@@ -76,16 +76,11 @@ SyGuSTerm = {
   Identifier
 | Literal
 | "(" ~ Identifier ~ SyGuSTerm+ ~ ")"
-| "(" ~ BANG ~ SyGuSTerm ~ Attribute+ ~ ")" 
-| "(" ~ EXISTS ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
-| "(" ~ FORALL ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
-| "(" ~ LET ~ "(" ~ VarBinding+ ~ SyGuSTerm ~ ")" ~ ")"
+| "(" ~ "!" ~ SyGuSTerm ~ Attribute+ ~ ")" 
+| "(" ~ "exists" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ "forall" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ "let" ~ "(" ~ VarBinding+ ~ ")" ~ SyGuSTerm ~ ")"
 }
-
-BANG = { "!" }
-EXISTS = { "exists" }
-FORALL = { "forall" }
-LET = { "let" }
 
 SyGuSBfTerm = {
   Identifier
@@ -169,7 +164,7 @@ SyGuSCmdDeclareDatatype = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ S
 SyGuSCmdDeclareDatatypes = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
 SyGuSCmdDeclareSort = { "(" ~ #SyGuSTkDeclareSort="declare-sort" ~ Symbol ~ Numeral ~ ")" }
 SyGuSCmdDefineFun = { "(" ~ #SyGuSTkDefineFun="define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
-SyGuSCmdDefineSort = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ Sort ~ ")" }
+SyGuSCmdDefineSort = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~ ")" ~ Sort ~ ")" }
 SyGuSCmdSetInfo = { "(" ~ #SyGuSTkSetInfo="set-info" ~ Keyword ~ Literal ~ ")" }
 SyGuSCmdSetLogic = { "(" ~ #SyGuSTkSetLogic="set-logic" ~ Symbol ~ ")" }
 SyGuSCmdSetOption = { "(" ~ #SyGuSTkSetOption="set-option" ~ Keyword ~ Literal ~ ")" }

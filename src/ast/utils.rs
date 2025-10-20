@@ -148,7 +148,7 @@ impl Index {
 }
 
 // SortedVar = {  "(" ~ Symbol ~ Sort ~ ")"  }
-#[derive(Debug, Clone, Display, PartialEq)]
+#[derive(Debug, Clone, Display, PartialEq, Eq)]
 /// A sorted variable structure encapsulating an identifier and its corresponding type based on the SyGuS specification.
 /// It pairs a string-based name with a sort value that defines the variable's type, enabling precise representation of variable declarations within SyGuS problems.
 #[display(fmt = "({name} {sort})")]

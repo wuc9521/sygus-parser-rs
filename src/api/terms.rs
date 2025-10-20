@@ -16,6 +16,11 @@ impl Term {
     pub fn ite(cond: SyGuSTerm, then_t: SyGuSTerm, else_t: SyGuSTerm) -> SyGuSTerm {
         Self::app("ite", vec![cond, then_t, else_t])
     }
+
+    pub fn str(s: &str) -> SyGuSTerm {
+        SyGuSTerm::Literal(Literal::StringConst(s.to_string()))
+    }
+
     pub fn let_binding(bindings: Vec<(String, SyGuSTerm)>, body: SyGuSTerm) -> SyGuSTerm {
         let vbs = bindings
             .into_iter()
@@ -44,8 +49,26 @@ impl Term {
         let s = format!("{:0width$b}", val, width = width);
         SyGuSTerm::Literal(Literal::BinConst(s))
     }
+    pub fn bconst_ones(width: usize) -> SyGuSTerm {
+        let s = format!("{}", "1".repeat(width));
+        SyGuSTerm::Literal(Literal::BinConst(s))
+    }
+    pub fn bconst_zeros(width: usize) -> SyGuSTerm {
+        let s = format!("{}", "0".repeat(width));
+        SyGuSTerm::Literal(Literal::BinConst(s))
+    }
     pub fn hconst(val: &str) -> SyGuSTerm {
         SyGuSTerm::Literal(Literal::HexConst(val.to_string()))
+    }
+    pub fn eq(x: SyGuSTerm, y: SyGuSTerm) -> SyGuSTerm {
+        Term::app("=", vec![x, y])
+    }
+}
+
+pub struct GTerm;
+impl GTerm {
+    pub fn var(name: &str) -> SyGuSGTerm {
+        SyGuSGTerm::SyGuSTerm(Term::var(name))
     }
 }
 

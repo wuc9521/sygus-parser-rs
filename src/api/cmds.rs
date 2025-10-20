@@ -7,15 +7,29 @@ pub struct Cmd {
     ret_sort: Option<Sort>,
     body: Option<SyGuSTerm>,
     grammar: Option<Option<GrammarDef>>,
+    arity: Option<usize>,
 }
 
 enum CmdKind {
+    DeclareSort,
     DefineFun,
     SynthFun,
+    DefineSort,
     Constraint,
 }
 
 impl Cmd {
+    pub fn declare_sort(name: &str, arity: usize) -> Self {
+        Self {
+            kind: Some(CmdKind::DeclareSort),
+            name: Some(name.to_string()),
+            args: Vec::new(),
+            ret_sort: None,
+            arity: Some(arity),
+            body: None,
+            grammar: None,
+        }
+    }
     pub fn define_fun(name: &str) -> Self {
         Self {
             kind: Some(CmdKind::DefineFun),
@@ -24,6 +38,7 @@ impl Cmd {
             ret_sort: None,
             body: None,
             grammar: None,
+            arity: None,
         }
     }
     pub fn synth_fun(name: &str) -> Self {
@@ -34,6 +49,7 @@ impl Cmd {
             ret_sort: None,
             body: None,
             grammar: Some(None),
+            arity: None,
         }
     }
     pub fn constraint() -> Self {
@@ -44,6 +60,7 @@ impl Cmd {
             ret_sort: None,
             body: None,
             grammar: None,
+            arity: None,
         }
     }
     pub fn arg(mut self, name: &str, sort: Sort) -> Self {
@@ -79,7 +96,20 @@ impl Cmd {
                 self.ret_sort.unwrap(),
                 self.grammar.unwrap(),
             ),
+            CmdKind::DeclareSort => SyGuSCmd::DeclareSort(self.name.unwrap(), self.arity.unwrap()),
             CmdKind::Constraint => SyGuSCmd::Constraint(self.body.unwrap()),
+            CmdKind::DefineSort => SyGuSCmd::DefineSort(self.name.unwrap(), vec![], self.ret_sort.unwrap()),
+        }
+    }
+    pub fn define_sort(name: &str, sort: Sort) -> Self {
+        Self {
+            kind: Some(CmdKind::DefineSort),
+            name: Some(name.to_string()),
+            args: vec![],
+            ret_sort: Some(sort),
+            body: None,
+            grammar: None,
+            arity: None,
         }
     }
 }

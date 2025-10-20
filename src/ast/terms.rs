@@ -267,7 +267,7 @@ impl SyGuSBfTerm {
     }
 }
 
-#[derive(Debug, Clone, Display)]
+#[derive(Debug, Clone, Display, PartialEq)]
 /// An enumeration representing different forms of a SyGuS grammar term.
 /// It distinguishes between a constant with its associated sort, a variable also characterized by a sort, and a base function term utilizing further structural information from SyGuSBfTerm.
 ///
@@ -324,7 +324,7 @@ impl SyGuSGTerm {
     }
 }
 
-#[derive(Debug, Clone, Display)]
+#[derive(Debug, Clone, Display, PartialEq)]
 /// A structure representing a grouped rule list in the SyGuS abstract syntax tree.
 /// This layout holds a textual symbol, a sort specification, and a collection of grammar terms generated according to the SyGuS standard.
 // GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
@@ -408,7 +408,7 @@ impl GroupedRuleList {
     }
 }
 
-#[derive(Debug, Clone, Display)]
+#[derive(Debug, Clone, Display, PartialEq)]
 /// A structure encapsulating a grammar definition for a SyGuS problem is provided.
 ///
 /// It aggregates sorted variables and grouped rule lists that together specify the grammar's production rules.

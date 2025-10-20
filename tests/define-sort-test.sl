@@ -1,0 +1,5 @@
+(set-logic LIA)
+(define-sort MySort () Int)
+(define-sort List (T) (List T))
+(define-sort Array (IndexType ElementType) (Array IndexType ElementType))
+(check-synth) 

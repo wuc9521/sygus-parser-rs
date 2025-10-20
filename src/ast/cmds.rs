@@ -6,7 +6,7 @@ use itertools::Itertools;
 use pest::iterators::Pair;
 use pest::Parser;
 
-#[derive(Debug, Clone, Display)]
+#[derive(Debug, Clone, Display, PartialEq, Eq, Hash)]
 /// Represents an enumeration of features supported by the SyGuS specification.
 ///
 ///
@@ -19,8 +19,17 @@ pub enum SyGuSFeature {
     Weights,
 }
 
-type DTConsDecl = (String, Vec<SortedVar>);
-type DTDecl = Vec<DTConsDecl>;
+/// data type constructor declaration
+#[derive(Debug, Clone, Display)]
+#[display(fmt = "({} ({}))", name, 
+    "args.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")")]
+pub struct DTConsDecl {
+    pub name: String,
+    pub args: Vec<SortedVar>,
+}
+
+/// data type declaration
+pub type DTDecl = Vec<DTConsDecl>;
 
 // SortDecl = { "(" ~ Symbol ~ Numeral ~ ")" }
 #[derive(Debug, Clone, Display)]
@@ -151,8 +160,8 @@ pub enum SyGuSCmd {
     DeclareCorrectnessCexOracle(String, String),
 
     // DeclareDatatypeCmd = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
-    #[display(fmt = "(declare-datatype {} {})", _0, 
-        "_1.iter().map(|(s, v)| format!(\"({} {})\", s, v.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \"))).collect::<Vec<_>>().join(\" \")")]
+    #[display(fmt = "(declare-datatype {} ({}))", _0, 
+        "_1.iter().map(|d| format!(\"({} {})\", d.name, d.args.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \"))).collect::<Vec<_>>().join(\" \")")]
     DeclareDatatype(String, DTDecl),
 
     // DeclareDatatypesCmd = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
@@ -177,9 +186,14 @@ pub enum SyGuSCmd {
     )]
     DefineFun(String, Vec<SortedVar>, Sort, SyGuSTerm),
 
-    // DefineSortCmd = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ Sort ~ ")" }
-    #[display(fmt = "(define-sort {} {})", _0, _1)]
-    DefineSort(String, Sort),
+    // DefineSortCmd = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~")" ~ Sort ~ ")" }
+    #[display(
+        fmt = "(define-sort {} ({}) {})",
+        _0,
+        "_1.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \")",
+        _2
+    )]
+    DefineSort(String, Vec<String>, Sort),
 
     // SetInfoCmd = { "(" ~ #SyGuSTkSetInfo="set-info" ~ Keyword ~ Literal ~ ")" }
     #[display(fmt = "(set-info {} {})", _0, _1)]
@@ -481,13 +495,21 @@ impl SyGuSCmd {
             Rule::SyGuSCmdDeclareDatatype => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
-                let decl = inner
+                // DTDecl = { "(" ~ DTConsDecl+ ~ ")" }
+                let dtdecl_pair = inner.next().unwrap();
+                let decl = dtdecl_pair
+                    .into_inner()
                     .map(|d| {
                         let mut inner = d.into_inner();
-                        (
-                            inner.next().unwrap().as_str().to_string(),
-                            inner.map(|s| SortedVar::parse(s).unwrap()).collect(),
-                        )
+                        let constructor_name = inner.next().unwrap().as_str().to_string();
+                        let sorted_vars = inner
+                            .filter(|s| s.as_rule() == Rule::SortedVar)
+                            .map(|s| SortedVar::parse(s).unwrap())
+                            .collect();
+                        DTConsDecl {
+                            name: constructor_name,
+                            args: sorted_vars,
+                        }
                     })
                     .collect();
                 return Ok(SyGuSCmd::DeclareDatatype(symbol, decl));
@@ -509,10 +531,10 @@ impl SyGuSCmd {
                         inner
                             .map(|c| {
                                 let mut inner = c.into_inner();
-                                (
-                                    inner.next().unwrap().as_str().to_string(),
-                                    inner.map(|s| SortedVar::parse(s).unwrap()).collect(),
-                                )
+                                DTConsDecl {
+                                    name: inner.next().unwrap().as_str().to_string(),
+                                    args: inner.map(|s| SortedVar::parse(s).unwrap()).collect(),
+                                }
                             })
                             .collect()
                     })
@@ -560,13 +582,30 @@ impl SyGuSCmd {
                     term.unwrap(),
                 ));
             }
+            // SyGuSCmdDefineSort = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~ ")" ~ Sort ~ ")" }
             Rule::SyGuSCmdDefineSort => {
                 let mut inner = pair.clone().into_inner();
-                let sort = Sort::parse(inner.next().unwrap()).unwrap();
-                return Ok(SyGuSCmd::DefineSort(
-                    inner.next().unwrap().as_str().to_string(),
-                    sort,
-                ));
+                let symbol = inner.next().unwrap().as_str().to_string();
+                let mut param_symbols = Vec::new();
+                let mut sort = None;
+
+                for inner_cmd in inner {
+                    match inner_cmd.as_rule() {
+                        Rule::Symbol => {
+                            param_symbols.push(inner_cmd.as_str().to_string());
+                        }
+                        Rule::Sort => {
+                            sort = Some(Sort::parse(inner_cmd).unwrap());
+                        }
+                        _ => {
+                            return Err(SyGuSParseError::InvalidSyntax(format!(
+                                "Unknown define-sort command: {}",
+                                inner_cmd
+                            )))
+                        }
+                    }
+                }
+                return Ok(SyGuSCmd::DefineSort(symbol, param_symbols, sort.unwrap()));
             }
             Rule::SyGuSCmdSetInfo => {
                 let mut inner = pair.clone().into_inner();
