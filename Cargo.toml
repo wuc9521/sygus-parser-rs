@@ -1,6 +1,6 @@
 [package]
 name = "sygus-parser"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Chentian Wu <wuc9521@gmail.com>"]
 description = "A Rust parser for the SyGuS format"
@@ -14,3 +14,5 @@ pest_derive = "2.7.3"
 itertools = "0.11.0"
 clap = { version = "4.4", features = ["derive"] }
 derive_more = "0.99.17"
+log = "0.4.20"
+env_logger = "0.11.3"

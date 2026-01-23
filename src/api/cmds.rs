@@ -1,115 +1,185 @@
 use crate::ast::*;
 
 pub struct Cmd {
-    kind: Option<CmdKind>,
-    name: Option<String>,
-    args: Vec<SortedVar>,
-    ret_sort: Option<Sort>,
-    body: Option<SyGuSTerm>,
-    grammar: Option<Option<GrammarDef>>,
-    arity: Option<usize>,
+    kind: CmdState,
 }
 
-enum CmdKind {
-    DeclareSort,
-    DefineFun,
-    SynthFun,
-    DefineSort,
-    Constraint,
+enum CmdState {
+    Ready(SyGuSCmd),
+    DefineFun {
+        name: String,
+        args: Vec<SortedVar>,
+        ret_sort: Option<Sort>,
+        body: Option<SyGuSTerm>,
+    },
+    SynthFun {
+        name: String,
+        args: Vec<SortedVar>,
+        ret_sort: Option<Sort>,
+        grammar: Option<GrammarDef>,
+    },
+    Constraint {
+        body: Option<SyGuSTerm>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct CmdBuildError {
+    kind: &'static str,
+    name: Option<String>,
+    missing: Vec<&'static str>,
+}
+
+impl std::fmt::Display for CmdBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = self
+            .name
+            .as_ref()
+            .map_or(String::from("<anonymous>"), |n| n.clone());
+        write!(
+            f,
+            "incomplete {} command (name: {}), missing: {}",
+            self.kind,
+            name,
+            self.missing.join(", ")
+        )
+    }
 }
 
 impl Cmd {
     pub fn declare_sort(name: &str, arity: usize) -> Self {
         Self {
-            kind: Some(CmdKind::DeclareSort),
-            name: Some(name.to_string()),
-            args: Vec::new(),
-            ret_sort: None,
-            arity: Some(arity),
-            body: None,
-            grammar: None,
+            kind: CmdState::Ready(SyGuSCmd::DeclareSort(name.to_string(), arity)),
         }
     }
     pub fn define_fun(name: &str) -> Self {
         Self {
-            kind: Some(CmdKind::DefineFun),
-            name: Some(name.to_string()),
-            args: Vec::new(),
-            ret_sort: None,
-            body: None,
-            grammar: None,
-            arity: None,
+            kind: CmdState::DefineFun {
+                name: name.to_string(),
+                args: Vec::new(),
+                ret_sort: None,
+                body: None,
+            },
         }
     }
     pub fn synth_fun(name: &str) -> Self {
         Self {
-            kind: Some(CmdKind::SynthFun),
-            name: Some(name.to_string()),
-            args: Vec::new(),
-            ret_sort: None,
-            body: None,
-            grammar: Some(None),
-            arity: None,
+            kind: CmdState::SynthFun {
+                name: name.to_string(),
+                args: Vec::new(),
+                ret_sort: None,
+                grammar: None,
+            },
         }
     }
     pub fn constraint() -> Self {
         Self {
-            kind: Some(CmdKind::Constraint),
-            name: None,
-            args: Vec::new(),
-            ret_sort: None,
-            body: None,
-            grammar: None,
-            arity: None,
+            kind: CmdState::Constraint { body: None },
         }
     }
     pub fn arg(mut self, name: &str, sort: Sort) -> Self {
-        self.args.push(SortedVar {
+        let var = SortedVar {
             name: name.to_string(),
             sort,
-        });
+        };
+        match &mut self.kind {
+            CmdState::DefineFun { args, .. } | CmdState::SynthFun { args, .. } => {
+                args.push(var);
+            }
+            _ => {}
+        }
         self
     }
     pub fn ret(mut self, sort: Sort) -> Self {
-        self.ret_sort = Some(sort);
+        match &mut self.kind {
+            CmdState::DefineFun { ret_sort, .. } | CmdState::SynthFun { ret_sort, .. } => {
+                *ret_sort = Some(sort);
+            }
+            _ => {}
+        }
         self
     }
     pub fn body(mut self, term: SyGuSTerm) -> Self {
-        self.body = Some(term);
+        match &mut self.kind {
+            CmdState::DefineFun { body, .. } | CmdState::Constraint { body } => {
+                *body = Some(term);
+            }
+            _ => {}
+        }
         self
     }
     pub fn grammar(mut self, g: GrammarDef) -> Self {
-        self.grammar = Some(Some(g));
+        match &mut self.kind {
+            CmdState::SynthFun { grammar, .. } => {
+                *grammar = Some(g);
+            }
+            _ => {}
+        }
         self
     }
-    pub fn build(self) -> SyGuSCmd {
-        match self.kind.unwrap() {
-            CmdKind::DefineFun => SyGuSCmd::DefineFun(
-                self.name.unwrap(),
-                self.args,
-                self.ret_sort.unwrap(),
-                self.body.unwrap(),
-            ),
-            CmdKind::SynthFun => SyGuSCmd::SynthFun(
-                self.name.unwrap(),
-                self.args,
-                self.ret_sort.unwrap(),
-                self.grammar.unwrap(),
-            ),
-            CmdKind::DeclareSort => SyGuSCmd::DeclareSort(self.name.unwrap(), self.arity.unwrap()),
-            CmdKind::Constraint => SyGuSCmd::Constraint(self.body.unwrap()),
-            CmdKind::DefineSort => SyGuSCmd::DefineSort(self.name.unwrap(), vec![], self.ret_sort.unwrap()),
+    pub fn try_build(self) -> Result<SyGuSCmd, CmdBuildError> {
+        match self.kind {
+            CmdState::Ready(cmd) => Ok(cmd),
+            CmdState::DefineFun {
+                name,
+                args,
+                ret_sort,
+                body,
+            } => {
+                let mut missing = Vec::new();
+                if ret_sort.is_none() {
+                    missing.push("return sort");
+                }
+                if body.is_none() {
+                    missing.push("body");
+                }
+                if !missing.is_empty() {
+                    return Err(CmdBuildError {
+                        kind: "define-fun",
+                        name: Some(name),
+                        missing,
+                    });
+                }
+                Ok(SyGuSCmd::DefineFun(
+                    name,
+                    args,
+                    ret_sort.unwrap(),
+                    body.unwrap(),
+                ))
+            }
+            CmdState::SynthFun {
+                name,
+                args,
+                ret_sort,
+                grammar,
+            } => {
+                if ret_sort.is_none() {
+                    return Err(CmdBuildError {
+                        kind: "synth-fun",
+                        name: Some(name),
+                        missing: vec!["return sort"],
+                    });
+                }
+                Ok(SyGuSCmd::SynthFun(name, args, ret_sort.unwrap(), grammar))
+            }
+            CmdState::Constraint { body } => {
+                if body.is_none() {
+                    return Err(CmdBuildError {
+                        kind: "constraint",
+                        name: None,
+                        missing: vec!["body"],
+                    });
+                }
+                Ok(SyGuSCmd::Constraint(body.unwrap()))
+            }
         }
+    }
+    pub fn build(self) -> SyGuSCmd {
+        self.try_build().unwrap_or_else(|err| panic!("{err}"))
     }
     pub fn define_sort(name: &str, sort: Sort) -> Self {
         Self {
-            kind: Some(CmdKind::DefineSort),
-            name: Some(name.to_string()),
-            args: vec![],
-            ret_sort: Some(sort),
-            body: None,
-            grammar: None,
-            arity: None,
+            kind: CmdState::Ready(SyGuSCmd::DefineSort(name.to_string(), vec![], sort)),
         }
     }
 }

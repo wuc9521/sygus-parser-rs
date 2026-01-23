@@ -21,8 +21,11 @@ pub enum SyGuSFeature {
 
 /// data type constructor declaration
 #[derive(Debug, Clone, Display)]
-#[display(fmt = "({} ({}))", name, 
-    "args.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")")]
+#[display(
+    fmt = "({} ({}))",
+    name,
+    "args.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")"
+)]
 pub struct DTConsDecl {
     pub name: String,
     pub args: Vec<SortedVar>,
@@ -264,20 +267,21 @@ impl SyGuSCmd {
     /// It handles a range of commands—such as assume, check-synth, constraint, declare-var, optimize-synth, set-feature, synth-fun, SMT commands, and oracle commands—by extracting the necessary components from the inner tokens.
     /// In the event of encountering an unsupported or unknown rule, it returns a parsing error, ensuring that only valid SyGuS commands are produced.
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
-        match pair.as_rule() {
-            Rule::SyGuSCmd => {
-                // into next level
-                let inner = pair.clone().into_inner().next().unwrap();
-                return SyGuSCmd::parse(inner);
-            }
+        if matches!(pair.as_rule(), Rule::SyGuSCmd) {
+            // into next level
+            let inner = pair.clone().into_inner().next().unwrap();
+            return SyGuSCmd::parse(inner);
+        }
+
+        let cmd = match pair.as_rule() {
             Rule::SyGuSCmdAssume => {
                 // SyGuSAssumeCmd = { "(" ~ "assume" ~ SyGuSTerm ~ ")"}
                 let term = SyGuSTerm::parse(pair.into_inner().next().unwrap()).unwrap();
-                return Ok(SyGuSCmd::Assume(term));
+                SyGuSCmd::Assume(term)
             }
             Rule::SyGuSCmdCheckSynth => {
                 // "(" ~ "check-synth" ~ ")"
-                return Ok(SyGuSCmd::CheckSynth);
+                SyGuSCmd::CheckSynth
             }
             Rule::SyGuSCmdChcConstraint => {
                 // "(" ~ #SyGuSTkChcConstraint="chc-constraint" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ SyGuSTerm ~ ")"
@@ -290,39 +294,35 @@ impl SyGuSCmd {
                     .collect();
                 let term1 = SyGuSTerm::parse(inner.next().unwrap()).unwrap();
                 let term2 = SyGuSTerm::parse(inner.next().unwrap()).unwrap();
-                return Ok(SyGuSCmd::ChcConstraint(sorted_vars, term1, term2));
+                SyGuSCmd::ChcConstraint(sorted_vars, term1, term2)
             }
             Rule::SyGuSCmdConstraint => {
                 // "(" ~ #SyGuSTkConstraint="constraint" ~ SyGuSTerm ~ ")"
                 let inner = pair.clone().into_inner().next().unwrap();
-                return Ok(SyGuSCmd::Constraint(SyGuSTerm::parse(inner).unwrap()));
+                SyGuSCmd::Constraint(SyGuSTerm::parse(inner).unwrap())
             }
             Rule::SyGuSCmdDeclareVar => {
                 // "(" ~ "declare-var" ~ Symbol ~ Sort ~ ")"
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::DeclareVar(
-                    symbol,
-                    Sort::parse(inner.next().unwrap()).unwrap(),
-                ));
+                SyGuSCmd::DeclareVar(symbol, Sort::parse(inner.next().unwrap()).unwrap())
             }
             Rule::SyGuSCmdDeclareWeight => {
                 // "(" ~ "declare-weight" ~ Symbol ~ Attribute* ~ ")"
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let attributes = inner.map(|a| Attribute::parse(a).unwrap()).collect_vec();
-                return Ok(SyGuSCmd::DeclareWeight(symbol, attributes));
+                SyGuSCmd::DeclareWeight(symbol, attributes)
             }
-
             Rule::SyGuSCmdInvConstraint => {
                 // SyGuSInvConstraintCmd = { "(" ~ "inv-constraint" ~ Symbol{4} ~ ")" }
                 let mut inner = pair.clone().into_inner();
-                return Ok(SyGuSCmd::InvConstraint(
+                SyGuSCmd::InvConstraint(
                     inner.next().unwrap().as_str().to_string(),
                     inner.next().unwrap().as_str().to_string(),
                     inner.next().unwrap().as_str().to_string(),
                     inner.next().unwrap().as_str().to_string(),
-                ));
+                )
             }
             // SyGuSOptimizeSynthCmd = { "(" ~ "optimize-synth" ~ "(" ~ SyGuSTerm* ~ ")" ~ Attribute* ~ ")" }
             Rule::SyGuSCmdOptimizeSynth => {
@@ -335,7 +335,7 @@ impl SyGuSCmd {
                     .map(|t| SyGuSTerm::parse(t).unwrap())
                     .collect_vec();
                 let attributes = inner.map(|a| Attribute::parse(a).unwrap()).collect_vec();
-                return Ok(SyGuSCmd::OptimizeSynth(terms, attributes));
+                SyGuSCmd::OptimizeSynth(terms, attributes)
             }
             Rule::SyGuSCmdSetFeature => {
                 // "(" ~ "set-feature" ~ Symbol{2} ~ BoolConst ~ ")"
@@ -351,7 +351,7 @@ impl SyGuSCmd {
                     _ => panic!("Unknown feature: {}", feature),
                 };
                 let value = value.parse::<bool>().unwrap();
-                return Ok(SyGuSCmd::SetFeature(feature, value));
+                SyGuSCmd::SetFeature(feature, value)
             }
             Rule::SyGuSCmdSynthFun => {
                 // SynthFunCmd = { "(" ~ "synth-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ GrammarDef? ~ ")" }
@@ -379,12 +379,8 @@ impl SyGuSCmd {
                         }
                     }
                 }
-                return Ok(SyGuSCmd::SynthFun(
-                    symbol,
-                    sorted_var_list,
-                    ret_sort.unwrap(),
-                    grammar_def,
-                ));
+                let ret_sort = ret_sort.unwrap();
+                SyGuSCmd::SynthFun(symbol, sorted_var_list, ret_sort, grammar_def)
             }
             Rule::SyGuSCmdOracleAssume => {
                 let mut inner = pair.clone().into_inner();
@@ -402,12 +398,7 @@ impl SyGuSCmd {
                     .collect();
                 let term = SyGuSTerm::parse(inner.next().unwrap()).unwrap();
                 let symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleAssume(
-                    sorted_vars,
-                    sorted_vars2,
-                    term,
-                    symbol,
-                ));
+                SyGuSCmd::OracleAssume(sorted_vars, sorted_vars2, term, symbol)
             }
             Rule::SyGuSCmdOracleConstraint => {
                 let mut inner = pair.clone().into_inner();
@@ -425,12 +416,7 @@ impl SyGuSCmd {
                     .collect();
                 let term = SyGuSTerm::parse(inner.next().unwrap()).unwrap();
                 let symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleConstraint(
-                    sorted_vars,
-                    sorted_vars2,
-                    term,
-                    symbol,
-                ));
+                SyGuSCmd::OracleConstraint(sorted_vars, sorted_vars2, term, symbol)
             }
             Rule::SyGuSCmdDeclareOracleFun => {
                 let mut inner = pair.clone().into_inner();
@@ -443,54 +429,49 @@ impl SyGuSCmd {
                     .collect_vec();
                 let ret_sort = Sort::parse(inner.next().unwrap()).unwrap();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::DeclareOracleFun(
-                    symbol,
-                    sorts,
-                    ret_sort,
-                    oracle_symbol,
-                ));
+                SyGuSCmd::DeclareOracleFun(symbol, sorts, ret_sort, oracle_symbol)
             }
             Rule::SyGuSCmdOracleConstraintIO => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleConstraintIO(symbol, oracle_symbol));
+                SyGuSCmd::OracleConstraintIO(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdOracleConstraintCex => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleConstraintCex(symbol, oracle_symbol));
+                SyGuSCmd::OracleConstraintCex(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdOracleConstraintMembership => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleConstraintMembership(symbol, oracle_symbol));
+                SyGuSCmd::OracleConstraintMembership(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdOracleConstraintPosWitness => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleConstraintPosWitness(symbol, oracle_symbol));
+                SyGuSCmd::OracleConstraintPosWitness(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdOracleConstraintNegWitness => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::OracleConstraintNegWitness(symbol, oracle_symbol));
+                SyGuSCmd::OracleConstraintNegWitness(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdDeclareCorrectnessOracle => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::DeclareCorrectnessOracle(symbol, oracle_symbol));
+                SyGuSCmd::DeclareCorrectnessOracle(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdDeclareCorrectnessCexOracle => {
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let oracle_symbol = inner.next().unwrap().as_str().to_string();
-                return Ok(SyGuSCmd::DeclareCorrectnessCexOracle(symbol, oracle_symbol));
+                SyGuSCmd::DeclareCorrectnessCexOracle(symbol, oracle_symbol)
             }
             Rule::SyGuSCmdDeclareDatatype => {
                 let mut inner = pair.clone().into_inner();
@@ -512,7 +493,7 @@ impl SyGuSCmd {
                         }
                     })
                     .collect();
-                return Ok(SyGuSCmd::DeclareDatatype(symbol, decl));
+                SyGuSCmd::DeclareDatatype(symbol, decl)
             }
             Rule::SyGuSCmdDeclareDatatypes => {
                 let mut inner = pair.clone().into_inner();
@@ -539,14 +520,14 @@ impl SyGuSCmd {
                             .collect()
                     })
                     .collect();
-                return Ok(SyGuSCmd::DeclareDatatypes(sorts, decls));
+                SyGuSCmd::DeclareDatatypes(sorts, decls)
             }
             Rule::SyGuSCmdDeclareSort => {
                 let mut inner = pair.clone().into_inner();
-                return Ok(SyGuSCmd::DeclareSort(
+                SyGuSCmd::DeclareSort(
                     inner.next().unwrap().as_str().to_string(),
                     inner.next().unwrap().as_str().parse::<usize>().unwrap(),
-                ));
+                )
             }
             Rule::SyGuSCmdDefineFun => {
                 // DefineFunCmd = { "(" ~ "define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
@@ -575,12 +556,9 @@ impl SyGuSCmd {
                         }
                     }
                 }
-                return Ok(SyGuSCmd::DefineFun(
-                    symbol,
-                    sorted_var_list,
-                    ret_sort.unwrap(),
-                    term.unwrap(),
-                ));
+                let ret_sort = ret_sort.unwrap();
+                let term = term.unwrap();
+                SyGuSCmd::DefineFun(symbol, sorted_var_list, ret_sort, term)
             }
             // SyGuSCmdDefineSort = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~ ")" ~ Sort ~ ")" }
             Rule::SyGuSCmdDefineSort => {
@@ -605,35 +583,36 @@ impl SyGuSCmd {
                         }
                     }
                 }
-                return Ok(SyGuSCmd::DefineSort(symbol, param_symbols, sort.unwrap()));
+                SyGuSCmd::DefineSort(symbol, param_symbols, sort.unwrap())
             }
             Rule::SyGuSCmdSetInfo => {
                 let mut inner = pair.clone().into_inner();
-                return Ok(SyGuSCmd::SetInfo(
+                SyGuSCmd::SetInfo(
                     inner.next().unwrap().as_str().to_string(),
                     Literal::from_str(inner.next().unwrap().as_str()),
-                ));
+                )
             }
             Rule::SyGuSCmdSetLogic => {
                 let mut inner = pair.clone().into_inner();
-                return Ok(SyGuSCmd::SetLogic(
-                    inner.next().unwrap().as_str().to_string(),
-                ));
+                SyGuSCmd::SetLogic(inner.next().unwrap().as_str().to_string())
             }
             Rule::SyGuSCmdSetOption => {
                 let mut inner = pair.clone().into_inner();
-                return Ok(SyGuSCmd::SetOption(
+                SyGuSCmd::SetOption(
                     inner.next().unwrap().as_str().to_string(),
                     Literal::from_str(inner.next().unwrap().as_str()),
-                ));
+                )
             }
             _ => {
-                println!("Unknown command: {:?}\n{:?}", pair.as_rule(), pair.as_str());
+                log::warn!("Unknown command: {:?}\n{:?}", pair.as_rule(), pair.as_str());
                 return Err(SyGuSParseError::InvalidSyntax(format!(
                     "Unknown command: {:?}",
                     pair.as_rule()
                 )));
             }
-        }
+        };
+
+        log::info!(target: "parsed", "{}", cmd);
+        Ok(cmd)
     }
 }
