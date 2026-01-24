@@ -76,18 +76,23 @@ SyGuSTerm = {
   Identifier
 | Literal
 | "(" ~ Identifier ~ SyGuSTerm+ ~ ")"
-| "(" ~ "!" ~ SyGuSTerm ~ Attribute+ ~ ")" 
-| "(" ~ "exists" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
-| "(" ~ "forall" ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
-| "(" ~ "let" ~ "(" ~ VarBinding+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ Bang ~ SyGuSTerm ~ Attribute+ ~ ")"
+| "(" ~ Exists ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ Forall ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
+| "(" ~ Let ~ "(" ~ VarBinding+ ~ ")" ~ SyGuSTerm ~ ")"
 }
 
 SyGuSBfTerm = {
   Identifier
 | Literal
 | "(" ~ Identifier ~ SyGuSBfTerm+ ~ ")"
-| "(" ~ "!" ~ SyGuSBfTerm ~ Attribute+ ~ ")"
+| "(" ~ Bang ~ SyGuSBfTerm ~ Attribute+ ~ ")"
 }
+
+Bang = { "!" }
+Exists = { "exists" }
+Forall = { "forall" }
+Let = { "let" }
 
 SortedVar = {  "(" ~ Symbol ~ Sort ~ ")"  }
 VarBinding = { "(" ~ Symbol ~ SyGuSTerm ~ ")" }

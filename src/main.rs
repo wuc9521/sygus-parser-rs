@@ -2,7 +2,7 @@ use clap::Parser;
 use log::{error, info};
 use std::error::Error;
 use std::fs;
-use std::io::Write;
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use sygus_parser::ast::SyGuSFile;
 
@@ -10,9 +10,12 @@ use sygus_parser::ast::SyGuSFile;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Path to the SyGuS file to parse
+    /// Read from input stream (stdin)
     #[arg(short, long)]
-    r#in: PathBuf,
+    r#in: bool,
+
+    /// Path to the SyGuS file to parse (required if --in is not used)
+    file_path: Option<PathBuf>,
 
     /// Enable verbose output
     #[arg(short, long, default_value_t = false)]
@@ -58,18 +61,35 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .init();
 
-    // Read content from the provided file path
-    let content = match fs::read_to_string(&args.r#in) {
-        Ok(content) => content,
-        Err(e) => {
-            error!("Error reading file {}: {}", args.r#in.display(), e);
-            return Err(e.into());
+    // Read content from file or stdin based on arguments
+    let content = if args.r#in {
+        // Read from stdin
+        if args.verbose {
+            info!("Reading from stdin");
         }
-    };
+        let mut buffer = String::new();
+        io::stdin().read_to_string(&mut buffer).map_err(|e| {
+            error!("Error reading from stdin: {}", e);
+            e
+        })?;
+        buffer
+    } else {
+        // Read from file path
+        let file_path = args.file_path.ok_or_else(|| {
+            let err_msg = "Error: file path is required when --in is not used";
+            error!("{}", err_msg);
+            io::Error::new(io::ErrorKind::InvalidInput, err_msg)
+        })?;
 
-    if args.verbose {
-        info!("Parsing: {}", args.r#in.display());
-    }
+        if args.verbose {
+            info!("Parsing: {}", file_path.display());
+        }
+
+        fs::read_to_string(&file_path).map_err(|e| {
+            error!("Error reading file {}: {}", file_path.display(), e);
+            e
+        })?
+    };
 
     // Parse the SyGuS problem
     let result = SyGuSFile::from_str(&content);

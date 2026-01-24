@@ -61,4 +61,16 @@ impl Sort {
             ))),
         }
     }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        match self {
+            Sort::Simple(id) => id.to_sexpr(),
+            Sort::Parameterized(id, subsorts) => {
+                let mut items = Vec::new();
+                items.push(id.to_sexpr());
+                items.extend(subsorts.iter().map(|s| s.to_sexpr()));
+                SExpr::SExprList(items)
+            }
+        }
+    }
 }

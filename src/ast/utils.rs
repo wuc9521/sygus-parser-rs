@@ -61,6 +61,18 @@ impl Identifier {
             Identifier::Indexed(symbol, _) => symbol,
         }
     }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        match self {
+            Identifier::Symbol(sym) => SExpr::Symbol(sym.clone()),
+            Identifier::Indexed(sym, indices) => {
+                let mut items = Vec::new();
+                items.push(SExpr::Symbol(sym.clone()));
+                items.extend(indices.iter().map(|idx| idx.to_sexpr()));
+                SExpr::SExprList(items)
+            }
+        }
+    }
 }
 
 /// Parses a string slice and determines whether it qualifies as a valid symbol.
@@ -145,6 +157,13 @@ impl Index {
             ))),
         }
     }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        match self {
+            Index::Numeral(num) => SExpr::SpecConstant(Literal::Numeral(*num)),
+            Index::Symbol(sym) => SExpr::Symbol(sym.clone()),
+        }
+    }
 }
 
 // SortedVar = {  "(" ~ Symbol ~ Sort ~ ")"  }
@@ -191,6 +210,10 @@ impl SortedVar {
                 inner_pairs
             ))),
         }
+    }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        SExpr::SExprList(vec![SExpr::Symbol(self.name.clone()), self.sort.to_sexpr()])
     }
 }
 
@@ -242,6 +265,13 @@ impl VarBinding {
             }
             _ => unimplemented!(),
         }
+    }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        SExpr::SExprList(vec![
+            SExpr::Symbol(self.name.to_string()),
+            self.term.to_sexpr(),
+        ])
     }
 }
 
@@ -343,6 +373,14 @@ impl Attribute {
             ))),
         }
     }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        let mut items = vec![SExpr::Keyword(self.keyword.clone())];
+        if let Some(val) = &self.value {
+            items.push(val.to_sexpr());
+        }
+        SExpr::SExprList(items)
+    }
 }
 
 #[derive(Debug, Clone, Display, PartialEq)]
@@ -357,6 +395,16 @@ pub enum AttributeValue {
         "_0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(\" \")"
     )]
     SExprList(Vec<SExpr>),
+}
+
+impl AttributeValue {
+    pub fn to_sexpr(&self) -> SExpr {
+        match self {
+            AttributeValue::SpecConstant(lit) => SExpr::SpecConstant(lit.clone()),
+            AttributeValue::Symbol(sym) => SExpr::Symbol(sym.clone()),
+            AttributeValue::SExprList(exprs) => SExpr::SExprList(exprs.clone()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Display, PartialEq)]

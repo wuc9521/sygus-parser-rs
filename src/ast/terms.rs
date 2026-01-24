@@ -118,7 +118,7 @@ impl SyGuSTerm {
 
             // Handle Annotated ("!" SyGuSTerm Attribute+)
             [bang, term_pair, attr_pairs @ ..]
-                if bang.as_str() == "!" && !attr_pairs.is_empty() =>
+                if bang.as_rule() == Rule::Bang && !attr_pairs.is_empty() =>
             {
                 let term = SyGuSTerm::parse(term_pair.clone())?;
                 let attributes = attr_pairs
@@ -130,7 +130,7 @@ impl SyGuSTerm {
             }
 
             // Handle Exists ("exists" "(" SortedVar+ ")" SyGuSTerm)
-            [exists, vars @ .., term_pair] if exists.as_str() == "exists" => {
+            [exists, vars @ .., term_pair] if exists.as_rule() == Rule::Exists => {
                 let mut sorted_vars = Vec::new();
                 for var in vars {
                     if var.as_rule() == Rule::SortedVar {
@@ -142,7 +142,7 @@ impl SyGuSTerm {
             }
 
             // Handle Forall ("forall" "(" SortedVar+ ")" SyGuSTerm)
-            [forall, vars @ .., term_pair] if forall.as_str() == "forall" => {
+            [forall, vars @ .., term_pair] if forall.as_rule() == Rule::Forall => {
                 let mut sorted_vars = Vec::new();
                 for var in vars {
                     if var.as_rule() == Rule::SortedVar {
@@ -154,7 +154,7 @@ impl SyGuSTerm {
             }
 
             // Handle Let ("let" "(" VarBinding+ ")" SyGuSTerm)
-            [let_, bindings @ .., term_pair] if let_.as_str() == "let" => {
+            [let_, bindings @ .., term_pair] if let_.as_rule() == Rule::Let => {
                 let mut var_bindings = Vec::new();
                 for binding in bindings {
                     if binding.as_rule() == Rule::VarBinding {
@@ -169,6 +169,51 @@ impl SyGuSTerm {
                 "Unexpected structure in SyGuSTerm parsing: {:?}",
                 inner_pairs
             ))),
+        }
+    }
+
+    pub fn to_sexpr(&self) -> SExpr {
+        match self {
+            SyGuSTerm::Identifier(id) => id.to_sexpr(),
+            SyGuSTerm::Literal(lit) => SExpr::SpecConstant(lit.clone()),
+            SyGuSTerm::Application(id, args) => {
+                let mut items = Vec::new();
+                items.push(id.to_sexpr());
+                items.extend(args.iter().map(|arg| arg.to_sexpr()));
+                SExpr::SExprList(items)
+            }
+            SyGuSTerm::Annotated(term, attrs) => {
+                let mut items = Vec::new();
+                items.push(SExpr::Symbol("!".to_string()));
+                items.push(term.to_sexpr());
+                items.extend(attrs.iter().map(|attr| attr.to_sexpr()));
+                SExpr::SExprList(items)
+            }
+            SyGuSTerm::Exists(vars, body) => {
+                let vars_list = SExpr::SExprList(vars.iter().map(|var| var.to_sexpr()).collect());
+                SExpr::SExprList(vec![
+                    SExpr::Symbol("exists".to_string()),
+                    vars_list,
+                    body.to_sexpr(),
+                ])
+            }
+            SyGuSTerm::Forall(vars, body) => {
+                let vars_list = SExpr::SExprList(vars.iter().map(|var| var.to_sexpr()).collect());
+                SExpr::SExprList(vec![
+                    SExpr::Symbol("forall".to_string()),
+                    vars_list,
+                    body.to_sexpr(),
+                ])
+            }
+            SyGuSTerm::Let(bindings, body) => {
+                let binds_list =
+                    SExpr::SExprList(bindings.iter().map(|vb| vb.to_sexpr()).collect());
+                SExpr::SExprList(vec![
+                    SExpr::Symbol("let".to_string()),
+                    binds_list,
+                    body.to_sexpr(),
+                ])
+            }
         }
     }
 }
