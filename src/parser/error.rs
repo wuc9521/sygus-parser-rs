@@ -7,11 +7,11 @@ use derive_more::Display;
 /// 
 /// This interface enables clear classification of parsing issues by wrapping the original Pest error, or by providing descriptive messages for invalid syntax and unsupported features, thereby facilitating targeted error handling and improved feedback during parsing operations.
 pub enum SyGuSParseError {
-    #[display(fmt = "Pest parser error: {}", _0)]
+    #[display("Pest parser error: {}", _0)]
     PestError(pest::error::Error<crate::parser::Rule>),
-    #[display(fmt = "Invalid syntax: {}", _0)]
+    #[display("Invalid syntax: {}", _0)]
     InvalidSyntax(String),
-    #[display(fmt = "Unsupported feature: {}", _0)]
+    #[display("Unsupported feature: {}", _0)]
     UnsupportedFeature(String),
 }
 

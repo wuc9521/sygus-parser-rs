@@ -22,9 +22,9 @@ pub enum SyGuSFeature {
 /// data type constructor declaration
 #[derive(Debug, Clone, Display)]
 #[display(
-    fmt = "({} ({}))",
+    "({} ({}))",
     name,
-    "args.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")"
+    args.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" ")
 )]
 pub struct DTConsDecl {
     pub name: String,
@@ -38,7 +38,7 @@ pub type DTDecl = Vec<DTConsDecl>;
 #[derive(Debug, Clone, Display)]
 /// A structure that holds sort declaration information.
 /// It contains a field for the sort's identifier and another for its arity, allowing users to capture the essential properties of a sort in a concise manner.
-#[display(fmt = "({} {})", symbol, arity)]
+#[display("({} {})", symbol, arity)]
 pub struct SortDecl {
     pub symbol: String,
     pub arity: usize,
@@ -48,77 +48,77 @@ pub struct SortDecl {
 /// Represents the set of available commands for specifying and processing SyGuS problems.
 /// This item encapsulates command variants including assumptions on terms, synthesis checks, constraints, variable and weight declarations, invariant constraints, and optimized synthesis directives, as well as commands that set features, logics, synthesis functions with optional grammars, and integrate both Oracle and SMT specific instructions.
 pub enum SyGuSCmd {
-    #[display(fmt = "(assume {})", _0)]
+    #[display("(assume {})", _0)]
     Assume(SyGuSTerm),
-    #[display(fmt = "(check-synth)")]
+    #[display("(check-synth)")]
     CheckSynth,
     // "(" ~ #SyGuSTkChcConstraint="chc-constraint" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ SyGuSTerm ~ ")"
     #[display(
-        fmt = "(chc-constraint ({}) {} {})",
-        "_0.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")",
+        "(chc-constraint ({}) {} {})",
+        _0.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" "),
         _1,
         _2
     )]
     ChcConstraint(Vec<SortedVar>, SyGuSTerm, SyGuSTerm),
 
-    #[display(fmt = "(constraint {})", _0)]
+    #[display("(constraint {})", _0)]
     Constraint(SyGuSTerm),
 
     // "(" ~ "declare-var" ~ Symbol ~ Sort ~ ")"
-    #[display(fmt = "(declare-var {} {})", _0, _1)]
+    #[display("(declare-var {} {})", _0, _1)]
     DeclareVar(String, Sort),
 
     // "(" ~ "declare-weight" ~ Symbol ~ Attribute* ~ ")"
     #[display(
-        fmt = "(declare-weight {} {})",
+        "(declare-weight {} {})",
         _0,
-        "_1.iter().map(|a| format!(\"{}\", a)).collect::<Vec<_>>().join(\" \")"
+        _1.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(" ")
     )]
     DeclareWeight(String, Vec<Attribute>),
 
     // SyGuSInvConstraintCmd = { "(" ~ "inv-constraint" ~ Symbol{4} ~ ")" }
-    #[display(fmt = "(inv-constraint {} {} {} {})", _0, _1, _2, _3)]
+    #[display("(inv-constraint {} {} {} {})", _0, _1, _2, _3)]
     InvConstraint(String, String, String, String),
 
     // "(" ~ "optimize-synth" ~ "(" ~ SyGuSTerm* ~ ")" ~ Attribute* ~ ")"
     #[display(
-        fmt = "(optimize-synth ({}) {})",
-        "_0.iter().map(|t| format!(\"{}\", t)).collect::<Vec<_>>().join(\" \")",
-        "_1.iter().map(|a| format!(\"{}\", a)).collect::<Vec<_>>().join(\" \")"
+        "(optimize-synth ({}) {})",
+        _0.iter().map(|t| format!("{}", t)).collect::<Vec<_>>().join(" "),
+        _1.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(" ")
     )]
     OptimizeSynth(Vec<SyGuSTerm>, Vec<Attribute>),
 
     // "(" ~ "set-feature" ~ Symbol{2} ~ BoolConst ~ ")"
-    #[display(fmt = "(set-feature {} {})", _0, _1)]
+    #[display("(set-feature {} {})", _0, _1)]
     SetFeature(SyGuSFeature, bool),
 
     // SynthFunCmd = { "(" ~ "synth-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ GrammarDef? ~ ")" }
     #[display(
-        fmt = "(synth-fun {} ({}) {} {})",
+        "(synth-fun {} ({}) {} {})",
         _0,
-        "_1.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")",
+        _1.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" "),
         _2,
-        "_3.as_ref().map_or(String::new(), |g| format!(\" {}\", g))"
+        _3.as_ref().map_or(String::new(), |g| format!(" {}", g))
     )]
     SynthFun(String, Vec<SortedVar>, Sort, Option<GrammarDef>),
 
-    // #[display(fmt = "{}", _0)]
+    // #[display("{}", _0)]
     // Oracle(OracleCmd),
 
     // SyGuSCmdOracleAssume = {"(" ~ #SyGuSTkOracleAssume="oracle-assume" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
     #[display(
-        fmt = "(oracle-assume ({}) ({}) {} {})",
-        "_0.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")",
-        "_1.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")",
+        "(oracle-assume ({}) ({}) {} {})",
+        _0.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" "),
+        _1.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" "),
         _2,
         _3
     )]
     OracleAssume(Vec<SortedVar>, Vec<SortedVar>, SyGuSTerm, String),
     // SyGuSCmdOracleConstraint = {"(" ~ #SyGuSTkOracleConstraint="oracle-constraint" ~ "(" ~ SortedVar* ~ ")" ~ "(" ~ SortedVar* ~ ")" ~ SyGuSTerm ~ Symbol ~ ")"}
     #[display(
-        fmt = "(oracle-constraint ({}) ({}) {} {})",
-        "_0.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")",
-        "_1.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")",
+        "(oracle-constraint ({}) ({}) {} {})",
+        _0.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" "),
+        _1.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" "),
         _2,
         _3
     )]
@@ -126,64 +126,64 @@ pub enum SyGuSCmd {
 
     // SyGuSCmdDeclareOracleFun = {"(" ~ #SyGuSTkDeclareOracleFun="declare-oracle-fun" ~ Symbol ~ "(" ~ Sort* ~ ")" ~ Sort ~ Symbol ~ ")"}
     #[display(
-        fmt = "(declare-oracle-fun {} ({}) {} {})",
+        "(declare-oracle-fun {} ({}) {} {})",
         _0,
-        "_1.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \")",
+        _1.iter().map(|s| format!("{}", s)).collect::<Vec<_>>().join(" "),
         _2,
         _3
     )]
     DeclareOracleFun(String, Vec<Sort>, Sort, String),
 
     // SyGuSCmdOracleConstraintIO = {"(" ~ #SyGuSTkOracleConstraintIO="oracle-constraint-io" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(oracle-constraint-io {} {})", _0, _1)]
+    #[display("(oracle-constraint-io {} {})", _0, _1)]
     OracleConstraintIO(String, String),
 
     // SyGuSCmdOracleConstraintCex = {"(" ~ #SyGuSTkOracleConstraintCex="oracle-constraint-cex" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(oracle-constraint-cex {} {})", _0, _1)]
+    #[display("(oracle-constraint-cex {} {})", _0, _1)]
     OracleConstraintCex(String, String),
 
     // SyGuSCmdOracleConstraintMembership = {"(" ~ #SyGuSTkOracleConstraintMembership="oracle-constraint-membership" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(oracle-constraint-membership {} {})", _0, _1)]
+    #[display("(oracle-constraint-membership {} {})", _0, _1)]
     OracleConstraintMembership(String, String),
 
     // SyGuSCmdOracleConstraintPosWitness = {"(" ~ #SyGuSTkOracleConstraintPoswitness="oracle-constraint-poswitness" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(oracle-constraint-poswitness {} {})", _0, _1)]
+    #[display("(oracle-constraint-poswitness {} {})", _0, _1)]
     OracleConstraintPosWitness(String, String),
 
     // SyGuSCmdOracleConstraintNegWitness = {"(" ~ #SyGuSTkOracleConstraintNegwitness="oracle-constraint-negwitness" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(oracle-constraint-negwitness {} {})", _0, _1)]
+    #[display("(oracle-constraint-negwitness {} {})", _0, _1)]
     OracleConstraintNegWitness(String, String),
 
     // SyGuSCmdDeclareCorrectnessOracle = {"(" ~ #SyGuSTkDeclareCorrectnessOracle="declare-correctness-oracle" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(declare-correctness-oracle {} {})", _0, _1)]
+    #[display("(declare-correctness-oracle {} {})", _0, _1)]
     DeclareCorrectnessOracle(String, String),
 
     // SyGuSCmdDeclareCorrectnessCexOracle = {"(" ~ #SyGuSTkDeclareCorrectnessCexOracle="declare-correctness-cex-oracle" ~ Symbol{2} ~ ")"}
-    #[display(fmt = "(declare-correctness-cex-oracle {} {})", _0, _1)]
+    #[display("(declare-correctness-cex-oracle {} {})", _0, _1)]
     DeclareCorrectnessCexOracle(String, String),
 
     // DeclareDatatypeCmd = { "(" ~ #SyGuSTkDeclareDatatype="declare-datatype" ~ Symbol ~ DTDecl ~ ")" }
-    #[display(fmt = "(declare-datatype {} ({}))", _0, 
-        "_1.iter().map(|d| format!(\"({} {})\", d.name, d.args.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \"))).collect::<Vec<_>>().join(\" \")")]
+    #[display("(declare-datatype {} ({}))", _0, 
+        _1.iter().map(|d| format!("({} {})", d.name, d.args.iter().map(|s| format!("{}", s)).collect::<Vec<_>>().join(" "))).collect::<Vec<_>>().join(" "))]
     DeclareDatatype(String, DTDecl),
 
     // DeclareDatatypesCmd = { "(" ~ #SyGuSTkDeclareDatatypes="declare-datatypes" ~ "(" ~ SortDecl+ ~ ")" ~ "(" ~ DTDecl+ ~ ")" ~ ")" }
     #[display(
-            fmt = "(declare-datatypes ({}) ({:?}))",
-            "_0.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \")",
+            "(declare-datatypes ({}) ({:?}))",
+            _0.iter().map(|s| format!("{}", s)).collect::<Vec<_>>().join(" "),
             _1 // TODO
         )]
     DeclareDatatypes(Vec<SortDecl>, Vec<DTDecl>),
 
     // DeclareSortCmd = { "(" ~ #SyGuSTkDeclareSort="declare-sort" ~ Symbol ~ Numeral ~ ")" }
-    #[display(fmt = "(declare-sort {} {})", _0, _1)]
+    #[display("(declare-sort {} {})", _0, _1)]
     DeclareSort(String, usize),
 
     // DefineFunCmd = { "(" ~ #SyGuSTkDefineFun="define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
     #[display(
-        fmt = "(define-fun {} ({}) {} {})",
+        "(define-fun {} ({}) {} {})",
         _0,
-        "_1.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \")",
+        _1.iter().map(|s| format!("{}", s)).collect::<Vec<_>>().join(" "),
         _2,
         _3
     )]
@@ -191,23 +191,23 @@ pub enum SyGuSCmd {
 
     // DefineSortCmd = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~")" ~ Sort ~ ")" }
     #[display(
-        fmt = "(define-sort {} ({}) {})",
+        "(define-sort {} ({}) {})",
         _0,
-        "_1.iter().map(|s| format!(\"{}\", s)).collect::<Vec<_>>().join(\" \")",
+        _1.iter().map(|s| format!("{}", s)).collect::<Vec<_>>().join(" "),
         _2
     )]
     DefineSort(String, Vec<String>, Sort),
 
     // SetInfoCmd = { "(" ~ #SyGuSTkSetInfo="set-info" ~ Keyword ~ Literal ~ ")" }
-    #[display(fmt = "(set-info {} {})", _0, _1)]
+    #[display("(set-info {} {})", _0, _1)]
     SetInfo(String, Literal),
 
     // SetLogicCmd = { "(" ~ #SyGuSTkSetLogic="set-logic" ~ Symbol ~ ")" }
-    #[display(fmt = "(set-logic {})", _0)]
+    #[display("(set-logic {})", _0)]
     SetLogic(String),
 
     // SetOptionCmd = { "(" ~ #SyGuSTkSetOption="set-option" ~ Keyword ~ Literal ~ ")" }
-    #[display(fmt = "(set-option {} {})", _0, _1)]
+    #[display("(set-option {} {})", _0, _1)]
     SetOption(String, Literal),
 }
 
@@ -215,8 +215,8 @@ pub enum SyGuSCmd {
 /// This struct serves as a container for the commands parsed from a SyGuS problem file.
 /// It encapsulates a public vector of command representations, allowing further processing or analysis of the parsed input.
 #[display(
-    fmt = "{}",
-    "cmds.iter().map(|c| format!(\"{}\", c)).collect::<Vec<_>>().join(\" \")"
+    "{}",
+    cmds.iter().map(|c| format!("{}", c)).collect::<Vec<_>>().join(" ")
 )]
 pub struct SyGuSFile {
     pub cmds: Vec<SyGuSCmd>,

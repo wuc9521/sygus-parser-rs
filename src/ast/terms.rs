@@ -12,41 +12,41 @@ use pest::Parser;
 /// Represents the various syntactic forms that can occur within a SyGuS term.
 /// This enumeration abstracts the building blocks of SyGuS expressions into distinct variants, ranging from simple identifiers and literals to composite forms like applications, annotated expressions, quantifiers (exists and forall), and let bindings.
 pub enum SyGuSTerm {
-    #[display(fmt = "{}", _0)] // Identifier
+    #[display("{}", _0)] // Identifier
     Identifier(Identifier),
-    #[display(fmt = "{}", _0)] // Literal
+    #[display("{}", _0)] // Literal
     Literal(Literal),
     #[display(
-        fmt = "({} {})",
+        "({} {})",
         _0,
-        "_1.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(\" \")"
+        _1.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(" ")
     )] // (Identifier followed by one or more SyGuSTerm)
     Application(Identifier, Vec<SyGuSTerm>),
 
     #[display(
-        fmt = "(! {} {})",
+        "(! {} {})",
         _0,
-        "_1.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(\" \")"
+        _1.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(" ")
     )] // ("!" SyGuSTerm Attribute+)
     Annotated(Box<SyGuSTerm>, Vec<Attribute>),
 
     #[display(
-        fmt = "(exists {} {})",
-        "_0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(\" \")",
+        "(exists {} {})",
+        _0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "),
         _1
     )] // ("exists" "(" SortedVar+ ")" SyGuSTerm)
     Exists(Vec<SortedVar>, Box<SyGuSTerm>),
 
     #[display(
-        fmt = "(forall {} {})",
-        "_0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(\" \")",
+        "(forall {} {})",
+        _0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "),
         _1
     )] // ("forall" "(" SortedVar+ ")" SyGuSTerm)
     Forall(Vec<SortedVar>, Box<SyGuSTerm>),
 
     #[display(
-        fmt = "(let ({}) {})",
-        "_0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(\" \")",
+        "(let ({}) {})",
+        _0.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" "),
         _1
     )] // ("let" "(" VarBinding+ ")" SyGuSTerm)
     Let(Vec<VarBinding>, Box<SyGuSTerm>),
@@ -223,23 +223,23 @@ impl SyGuSTerm {
 ///
 /// Encapsulates four distinct variants: one for a simple identifier, another for a literal value, one for an application where an identifier is applied to a non-empty list of basic terms, and one for an annotated term that couples a basic term with one or more attributes.
 pub enum SyGuSBfTerm {
-    #[display(fmt = "{}", _0)] // Identifier
+    #[display("{}", _0)] // Identifier
     Identifier(Identifier),
 
-    #[display(fmt = "{}", _0)] // Literal
+    #[display("{}", _0)] // Literal
     Literal(Literal),
 
     #[display(
-        fmt = "({} {})",
+        "({} {})",
         _0,
-        "_1.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")"
+        _1.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" ")
     )] // (Identifier followed by one or more SyGuSBfTerm)
     Application(Identifier, Vec<SyGuSBfTerm>),
 
     #[display(
-        fmt = "(! {} {})",
-        "_0.as_ref().to_string()",
-        "_1.iter().map(|v| format!(\"{}\", v)).collect::<Vec<_>>().join(\" \")"
+        "(! {} {})",
+        _0.as_ref().to_string(),
+        _1.iter().map(|v| format!("{}", v)).collect::<Vec<_>>().join(" ")
     )] // ("!" SyGuSBfTerm Attribute+)
     Annotated(Box<SyGuSBfTerm>, Vec<Attribute>),
 }
@@ -318,11 +318,11 @@ impl SyGuSBfTerm {
 ///
 /// This interface allows users to classify and process SyGuS grammar terms based on their specific syntax and semantics as dictated by the SyGuS v2.1 standard, enabling targeted handling for different term categories during parsing and synthesis.
 pub enum SyGuSGTerm {
-    #[display(fmt = "{}", _0)] // Sort
+    #[display("{}", _0)] // Sort
     Constant(Sort),
-    #[display(fmt = "{}", _0)] // Sort
+    #[display("{}", _0)] // Sort
     Variable(Sort),
-    #[display(fmt = "{}", _0)] // SyGuSBfTerm
+    #[display("{}", _0)] // SyGuSBfTerm
     SyGuSTerm(SyGuSTerm),
 }
 
@@ -374,10 +374,10 @@ impl SyGuSGTerm {
 /// This layout holds a textual symbol, a sort specification, and a collection of grammar terms generated according to the SyGuS standard.
 // GroupedRuleList = { "(" ~ Symbol ~ Sort ~ "(" ~ SyGuSGTerm+ ~ ")" ~ ")" }
 #[display(
-    fmt = "({} {} ({}))",
+    "({} {} ({}))",
     symbol,
     sort,
-    "terms.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(\" \")"
+    terms.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(" ")
 )] // (Symbol Sort Vec<SyGuSGTerm>)
 pub struct GroupedRuleList {
     pub symbol: Symbol,
@@ -463,9 +463,9 @@ impl GroupedRuleList {
 /// This interface organizes essential elements for representing a grammar in the SyGuS v2.1 standard.
 // GrammarDef = { ("(" ~ SortedVar+ ~ ")")? ~ "(" ~ GroupedRuleList+ ~ ")" }
 #[display(
-    fmt = "{}({})",
-    "if sorted_vars.is_empty() { String::new() } else { format!(\"({}) \", sorted_vars.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(\" \")) }",
-    "grouped_rule_lists.iter().map(|g| g.to_string()).collect::<Vec<_>>().join(\" \")"
+    "{}({})",
+    if sorted_vars.is_empty() { String::new() } else { format!("({}) ", sorted_vars.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")) },
+    grouped_rule_lists.iter().map(|g| g.to_string()).collect::<Vec<_>>().join(" ")
 )] // (Vec<SortedVar> Vec<GroupedRuleList>)
 pub struct GrammarDef {
     pub sorted_vars: Vec<SortedVar>,

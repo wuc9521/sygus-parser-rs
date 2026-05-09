@@ -12,9 +12,9 @@ pub type Symbol = String;
 pub enum Identifier {
     Symbol(Symbol),
     #[display(
-        fmt = "({} {})",
+        "({} {})",
         _0,
-        "_1.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(\" \")"
+        _1.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(" ")
     )]
     Indexed(Symbol, Vec<Index>),
 }
@@ -127,9 +127,9 @@ fn is_special_char(c: char) -> bool {
 ///
 /// It offers a variant to encapsulate an unsigned integer as a numeral index and a variant to encapsulate a string as a symbolic index, facilitating flexible index representations in the parser's abstract syntax tree.
 pub enum Index {
-    #[display(fmt = "{}", _0)]
+    #[display("{}", _0)]
     Numeral(usize),
-    #[display(fmt = "{}", _0)]
+    #[display("{}", _0)]
     Symbol(String),
 }
 
@@ -170,7 +170,7 @@ impl Index {
 #[derive(Debug, Clone, Display, PartialEq, Eq)]
 /// A sorted variable structure encapsulating an identifier and its corresponding type based on the SyGuS specification.
 /// It pairs a string-based name with a sort value that defines the variable's type, enabling precise representation of variable declarations within SyGuS problems.
-#[display(fmt = "({name} {sort})")]
+#[display("({name} {sort})")]
 pub struct SortedVar {
     pub name: String,
     pub sort: Sort,
@@ -220,7 +220,7 @@ impl SortedVar {
 #[derive(Debug, Clone, Display)]
 /// A structure representing a variable with a name and an associated sort.
 /// It provides a straightforward interface for storing a variable's identifier alongside its designated type sort.
-#[display(fmt = "({name} {sort})")]
+#[display("({name} {sort})")]
 pub struct Variable {
     pub name: String,
     pub sort: Sort,
@@ -229,7 +229,7 @@ pub struct Variable {
 #[derive(Debug, Clone, Display, PartialEq)]
 /// A variable binding encapsulation that associates an identifier with a SyGuS term.
 /// It exposes two fields: a string representing the variable's name and a boxed term that contains the corresponding SyGuS expression, serving as a component within the abstract syntax tree during parsing.
-#[display(fmt = "({name} {})", term)]
+#[display("({name} {})", term)]
 pub struct VarBinding {
     pub name: String,
     pub term: Box<SyGuSTerm>,
@@ -279,17 +279,17 @@ impl VarBinding {
 /// Represents a literal value parsed from a SyGuS problem, encapsulating various constant forms.
 /// This enumeration distinguishes between numeric types, booleans, and textual constants by providing variants for integers, decimals, booleans, hexadecimal constants, binary constants, and string constants.
 pub enum Literal {
-    #[display(fmt = "{}", _0)]
+    #[display("{}", _0)]
     Numeral(usize),
-    #[display(fmt = "{}", _0)]
+    #[display("{}", _0)]
     Decimal(f64),
-    #[display(fmt = "{}", _0)]
+    #[display("{}", _0)]
     Bool(bool),
-    #[display(fmt = "#x{}", _0)]
+    #[display("#x{}", _0)]
     HexConst(String),
-    #[display(fmt = "#b{}", _0)]
+    #[display("#b{}", _0)]
     BinConst(String),
-    #[display(fmt = "{}", _0)]
+    #[display("{}", _0)]
     StringConst(String),
 }
 
@@ -311,11 +311,11 @@ impl Literal {
         if s == "false" {
             return Literal::Bool(false);
         }
-        if s.starts_with("#x") && s[2..].chars().all(|c| c.is_digit(16)) {
-            return Literal::HexConst(s.to_string());
+        if s.starts_with("#x") && s[2..].chars().all(|c| c.is_ascii_hexdigit()) {
+            return Literal::HexConst(s[2..].to_string());
         }
         if s.starts_with("#b") && s[2..].chars().all(|c| c == '0' || c == '1') {
-            return Literal::BinConst(s.to_string());
+            return Literal::BinConst(s[2..].to_string());
         }
         Literal::StringConst(s.to_string())
     }
@@ -326,9 +326,9 @@ impl Literal {
 /// A structure representing an attribute, associating a keyword with an optional value.
 /// It encapsulates a string-based keyword that identifies the attribute and an optional value providing additional context or specification, facilitating flexible attribute representation as required by the SyGuS standard.
 #[display(
-    fmt = ":{} {}",
+    ":{} {}",
     keyword,
-    "value.as_ref().map_or(String::new(), |v| v.to_string())"
+    value.as_ref().map_or(String::new(), |v| v.to_string())
 )]
 pub struct Attribute {
     pub keyword: String,
@@ -391,8 +391,8 @@ pub enum AttributeValue {
     SpecConstant(Literal),
     Symbol(String),
     #[display(
-        fmt = "({})",
-        "_0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(\" \")"
+        "({})",
+        _0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" ")
     )]
     SExprList(Vec<SExpr>),
 }
@@ -419,8 +419,8 @@ pub enum SExpr {
     Reserved(String),
     Keyword(String),
     #[display(
-        fmt = "({})",
-        "_0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(\" \")"
+        "({})",
+        _0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" ")
     )]
     SExprList(Vec<SExpr>), //  "(" ~ SExpr* ~ ")"
 }
