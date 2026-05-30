@@ -347,14 +347,22 @@ impl SyGuSGTerm {
     /// In case the structure does not match any expected pattern, it returns an error indicating an unexpected syntax structure.
     ///
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
+        // The pest grammar literals "Constant" and "Variable" aren't captured
+        // as inner pairs, so inner_pairs contains only the Sort (or the
+        // SyGuSTerm child).  We disambiguate by looking at the original span.
+        let original = pair.as_str().trim();
+        let kw = original
+            .strip_prefix('(')
+            .map(|s| s.trim_start().split_whitespace().next())
+            .flatten();
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
-            [constant_pair] if constant_pair.as_str() == "Constant" => {
-                let sort = Sort::parse(inner_pairs[1].clone())?;
+            [sort_pair] if kw == Some("Constant") => {
+                let sort = Sort::parse(sort_pair.clone())?;
                 Ok(SyGuSGTerm::Constant(sort))
             }
-            [variable_pair] if variable_pair.as_str() == "Variable" => {
-                let sort = Sort::parse(inner_pairs[1].clone())?;
+            [sort_pair] if kw == Some("Variable") => {
+                let sort = Sort::parse(sort_pair.clone())?;
                 Ok(SyGuSGTerm::Variable(sort))
             }
             [term_pair] => {

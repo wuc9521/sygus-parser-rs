@@ -150,6 +150,15 @@ fn write_cmd<W: Write>(writer: &mut W, cmd: &SyGuSCmd) -> io::Result<()> {
             write_term(writer, body)?;
             writer.write_all(b")")
         }
+        SyGuSCmd::DefineFunRec(name, vars, sort, body) => {
+            write!(writer, "(define-fun-rec {name} (")?;
+            write_spaced(writer, vars, write_sorted_var)?;
+            writer.write_all(b") ")?;
+            write_sort(writer, sort)?;
+            writer.write_all(b" ")?;
+            write_term(writer, body)?;
+            writer.write_all(b")")
+        }
         SyGuSCmd::DefineSort(name, params, sort) => {
             write!(writer, "(define-sort {name} (")?;
             write_spaced_str(writer, params)?;

@@ -45,7 +45,7 @@ impl Identifier {
                 "concat" => Some(BuiltinOp::Concat),
                 _ => None,
             },
-            Identifier::Indexed(sym, indices) if sym == "_ extract" && indices.len() == 2 => {
+            Identifier::Indexed(sym, indices) if sym == "extract" && indices.len() == 2 => {
                 let [Index::Numeral(hi), Index::Numeral(lo)] = indices.as_slice() else {
                     return None;
                 };

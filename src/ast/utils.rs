@@ -11,8 +11,11 @@ pub type Symbol = String;
 #[derive(Debug, Clone, Display, PartialEq, Eq, Hash)]
 pub enum Identifier {
     Symbol(Symbol),
+    // SMT-LIB indexed-identifier syntax is `(_ <Symbol> <Index>+)`. The
+    // leading `_` is part of the syntactic form, not the symbol's name; the
+    // parser drops it. Display must put it back for round-trip correctness.
     #[display(
-        "({} {})",
+        "(_ {} {})",
         _0,
         _1.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(" ")
     )]

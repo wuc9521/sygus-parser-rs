@@ -189,6 +189,17 @@ pub enum SyGuSCmd {
     )]
     DefineFun(String, Vec<SortedVar>, Sort, SyGuSTerm),
 
+    // DefineFunRecCmd = { "(" ~ #SyGuSTkDefineFunRec="define-fun-rec" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
+    // Same shape as DefineFun, but the body may reference the function name recursively.
+    #[display(
+        "(define-fun-rec {} ({}) {} {})",
+        _0,
+        _1.iter().map(|s| format!("{}", s)).collect::<Vec<_>>().join(" "),
+        _2,
+        _3
+    )]
+    DefineFunRec(String, Vec<SortedVar>, Sort, SyGuSTerm),
+
     // DefineSortCmd = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~")" ~ Sort ~ ")" }
     #[display(
         "(define-sort {} ({}) {})",
@@ -529,8 +540,10 @@ impl SyGuSCmd {
                     inner.next().unwrap().as_str().parse::<usize>().unwrap(),
                 )
             }
-            Rule::SyGuSCmdDefineFun => {
-                // DefineFunCmd = { "(" ~ "define-fun" ~ Symbol ~ "(" ~ SortedVar* ~ ")" ~ Sort ~ SyGuSTerm ~ ")" }
+            Rule::SyGuSCmdDefineFun | Rule::SyGuSCmdDefineFunRec => {
+                // (define-fun S ((args)) ret body)  /  (define-fun-rec ...)
+                // Same shape; DefineFunRec body may call S recursively.
+                let is_rec = matches!(pair.as_rule(), Rule::SyGuSCmdDefineFunRec);
                 let mut inner = pair.clone().into_inner();
                 let symbol = inner.next().unwrap().as_str().to_string();
                 let mut sorted_var_list = Vec::new();
@@ -539,7 +552,6 @@ impl SyGuSCmd {
                 for inner_cmd in inner {
                     match inner_cmd.as_rule() {
                         Rule::SortedVar => {
-                            // let sorted_var = SortedVar::parse(inner_cmd);
                             sorted_var_list.push(SortedVar::parse(inner_cmd).unwrap());
                         }
                         Rule::Sort => {
@@ -550,7 +562,8 @@ impl SyGuSCmd {
                         }
                         _ => {
                             return Err(SyGuSParseError::InvalidSyntax(format!(
-                                "Unknown define-fun command: {:?}",
+                                "Unknown define-fun{} command: {:?}",
+                                if is_rec { "-rec" } else { "" },
                                 inner_cmd
                             )))
                         }
@@ -558,7 +571,11 @@ impl SyGuSCmd {
                 }
                 let ret_sort = ret_sort.unwrap();
                 let term = term.unwrap();
-                SyGuSCmd::DefineFun(symbol, sorted_var_list, ret_sort, term)
+                if is_rec {
+                    SyGuSCmd::DefineFunRec(symbol, sorted_var_list, ret_sort, term)
+                } else {
+                    SyGuSCmd::DefineFun(symbol, sorted_var_list, ret_sort, term)
+                }
             }
             // SyGuSCmdDefineSort = { "(" ~ #SyGuSTkDefineSort="define-sort" ~ Symbol ~ "(" ~ Symbol* ~ ")" ~ Sort ~ ")" }
             Rule::SyGuSCmdDefineSort => {

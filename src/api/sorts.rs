@@ -1,4 +1,4 @@
-use crate::ast::{Identifier, Sort};
+use crate::ast::{Identifier, Index, Sort};
 
 impl Sort {
     pub fn bool() -> Self {
@@ -16,10 +16,15 @@ impl Sort {
         Sort::Simple(Identifier::Symbol("String".to_string()))
     }
     pub fn bitvec(width: usize) -> Self {
-        Sort::Parameterized(
-            Identifier::Symbol("_ BitVec".to_string()),
-            vec![Sort::Simple(Identifier::Symbol(width.to_string()))],
-        )
+        // Mirror what the parser emits for `(_ BitVec N)`: a Simple sort
+        // whose identifier is the indexed form `(_ BitVec N)`. Earlier this
+        // function built `Parameterized(Symbol("_ BitVec"), …)` which
+        // displayed correctly but had the wrong AST shape and the wrong
+        // symbol name, breaking equality and downstream lookups.
+        Sort::Simple(Identifier::Indexed(
+            "BitVec".to_string(),
+            vec![Index::Numeral(width)],
+        ))
     }
     pub fn from_name(name: &str) -> Self {
         Sort::Simple(Identifier::Symbol(name.to_string()))

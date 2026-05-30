@@ -157,7 +157,7 @@ impl BitVec {
     }
     pub fn extract(high: usize, low: usize, x: SyGuSTerm) -> SyGuSTerm {
         let extract_id = Identifier::Indexed(
-            "_ extract".to_string(),
+            "extract".to_string(),
             vec![Index::Numeral(high), Index::Numeral(low)],
         );
         SyGuSTerm::Application(extract_id, vec![x])
