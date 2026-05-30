@@ -288,7 +288,7 @@ fn write_identifier<W: Write>(writer: &mut W, id: &Identifier) -> io::Result<()>
     match id {
         Identifier::Symbol(sym) => writer.write_all(sym.as_bytes()),
         Identifier::Indexed(sym, indices) => {
-            writer.write_all(b"(")?;
+            writer.write_all(b"(_ ")?;
             writer.write_all(sym.as_bytes())?;
             if !indices.is_empty() {
                 writer.write_all(b" ")?;
