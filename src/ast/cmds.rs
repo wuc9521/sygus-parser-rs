@@ -629,7 +629,7 @@ impl SyGuSCmd {
             }
         };
 
-        log::info!(target: "parsed", "{}", cmd);
+        log::debug!(target: "parsed", "{}", cmd);
         Ok(cmd)
     }
 }
