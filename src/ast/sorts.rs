@@ -73,4 +73,20 @@ impl Sort {
             }
         }
     }
+
+    /// For `Sort::Simple(Identifier::Symbol(name))`, returns a borrowed view
+    /// of the symbol — no allocation. Returns `None` for parameterized
+    /// sorts and indexed identifiers (whose `Display` is a multi-token
+    /// `(_ name idx)`), so callers should fall back to `to_string` in
+    /// those cases.
+    ///
+    /// Hot enough that this single accessor is what lets downstream
+    /// evaluators avoid `sort.to_string()` per arg per call.
+    #[inline]
+    pub fn as_simple_name(&self) -> Option<&str> {
+        match self {
+            Sort::Simple(Identifier::Symbol(s)) => Some(s.as_str()),
+            _ => None,
+        }
+    }
 }

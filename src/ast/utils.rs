@@ -410,7 +410,7 @@ impl AttributeValue {
     }
 }
 
-#[derive(Debug, Clone, Display, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 /// Enumeration representing a symbolic expression for SyGuS parsing that encapsulates various expression components.
 ///
 ///
@@ -421,11 +421,297 @@ pub enum SExpr {
     Symbol(String),
     Reserved(String),
     Keyword(String),
-    #[display(
-        "({})",
-        _0.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" ")
-    )]
     SExprList(Vec<SExpr>), //  "(" ~ SExpr* ~ ")"
+}
+
+impl From<i64> for SExpr {
+    /// Convenience for callers (e.g. delis term lowering) that produce
+    /// integer literals; truncates negative values to 0 via `as usize`.
+    fn from(n: i64) -> Self {
+        SExpr::SpecConstant(Literal::Numeral(n as usize))
+    }
+}
+
+impl std::fmt::Display for SExpr {
+    /// Hand-written so deep trees don't allocate a Vec<String> per node like
+    /// derive_more's macro would. The previous version was a measurable
+    /// bottleneck (~15% of wall time) when used as the IR for delis bisim.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
+        match self {
+            SExpr::SpecConstant(lit) => write!(f, "{lit}"),
+            SExpr::Symbol(s) | SExpr::Reserved(s) | SExpr::Keyword(s) => f.write_str(s),
+            SExpr::SExprList(items) => {
+                f.write_char('(')?;
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        f.write_char(' ')?;
+                    }
+                    item.fmt(f)?;
+                }
+                f.write_char(')')
+            }
+        }
+    }
+}
+
+impl SExpr {
+    /// Constructs an `SExpr::Symbol` from any string-like input.
+    pub fn symbol(s: impl Into<String>) -> Self {
+        SExpr::Symbol(s.into())
+    }
+
+    /// Constructs an `SExpr::SExprList` from any iterator of children.
+    pub fn list<I: IntoIterator<Item = SExpr>>(items: I) -> Self {
+        SExpr::SExprList(items.into_iter().collect())
+    }
+
+    /// Returns the symbol text if `self` is `Symbol`/`Reserved`/`Keyword`.
+    ///
+    /// `Reserved` (SMT reserved words like `assert`, `define-fun`) and
+    /// `Keyword` (`:foo`) are produced by the pest-driven SyGuS parser but
+    /// never by the hand-written `from_str` below; both are exposed here
+    /// for callers that walk pre-parsed ASTs.
+    ///
+    /// `#[inline]` is load-bearing: walk-loops in downstream crates call
+    /// this in their hot path; without it the cross-crate boundary costs
+    /// 3–4× wall on the delis bisim and encoding paths.
+    #[inline]
+    pub fn as_symbol(&self) -> Option<&str> {
+        match self {
+            SExpr::Symbol(s) | SExpr::Reserved(s) | SExpr::Keyword(s) => Some(s.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Returns the integer literal value if `self` is `SpecConstant(Numeral)`.
+    #[inline]
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            SExpr::SpecConstant(Literal::Numeral(n)) => Some(*n as i64),
+            _ => None,
+        }
+    }
+
+    /// Returns the boolean literal value if `self` is `SpecConstant(Bool)` or
+    /// a `Symbol("true"/"false")`. The symbol form arises because most
+    /// SyGuS-term-to-SExpr conversions emit booleans as symbols.
+    #[inline]
+    pub fn as_bool(&self) -> Option<bool> {
+        if let SExpr::SpecConstant(Literal::Bool(b)) = self {
+            return Some(*b);
+        }
+        match self.as_symbol()? {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        }
+    }
+
+    /// Returns the list elements as a borrowed slice without allocating.
+    #[inline]
+    pub fn as_slice(&self) -> Option<&[SExpr]> {
+        match self {
+            SExpr::SExprList(items) => Some(items.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Returns the list elements as `Vec<&SExpr>` (lexpr-compatible API).
+    /// Prefer `as_slice` in new code — it doesn't allocate.
+    #[inline]
+    pub fn to_ref_vec(&self) -> Option<Vec<&SExpr>> {
+        match self {
+            SExpr::SExprList(items) => Some(items.iter().collect()),
+            _ => None,
+        }
+    }
+
+    /// Hand-written generic s-expression parser. Distinct from the pest-based
+    /// SyGuS grammar driver: this accepts any well-balanced s-expression with
+    /// atoms classified as integer (`Literal::Numeral`) or symbol. Use it for
+    /// parsing fragments embedded inside SyGuS programs (e.g. `define-finite`
+    /// record bodies and `define-semantics` match expressions) where the
+    /// official SyGuS term grammar is too strict (no zero-arg applications,
+    /// no match form, etc.).
+    ///
+    /// Comments (`;` to end of line) are skipped. Atoms are not interned.
+    /// `Reserved` and `Keyword` variants are never produced; SMT reserved
+    /// words and `:foo` tokens both come back as `Symbol`.
+    pub fn from_str(s: &str) -> Result<Self, SExprParseError> {
+        let mut p = SExprParser::new(s);
+        p.skip_ws();
+        let v = p.parse_one()?;
+        p.skip_ws();
+        if p.pos < p.bytes.len() {
+            return Err(SExprParseError {
+                pos: p.pos,
+                msg: format!("unexpected trailing input: {:?}", &s[p.pos..]),
+            });
+        }
+        Ok(v)
+    }
+}
+
+#[derive(Debug)]
+pub struct SExprParseError {
+    pub pos: usize,
+    pub msg: String,
+}
+
+impl std::fmt::Display for SExprParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "sexpr parse error at byte {}: {}", self.pos, self.msg)
+    }
+}
+
+impl std::error::Error for SExprParseError {}
+
+struct SExprParser<'a> {
+    bytes: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> SExprParser<'a> {
+    fn new(s: &'a str) -> Self {
+        SExprParser {
+            bytes: s.as_bytes(),
+            pos: 0,
+        }
+    }
+
+    fn skip_ws(&mut self) {
+        loop {
+            while self.pos < self.bytes.len() && self.bytes[self.pos].is_ascii_whitespace() {
+                self.pos += 1;
+            }
+            if self.pos < self.bytes.len() && self.bytes[self.pos] == b';' {
+                while self.pos < self.bytes.len() && self.bytes[self.pos] != b'\n' {
+                    self.pos += 1;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn parse_one(&mut self) -> Result<SExpr, SExprParseError> {
+        self.skip_ws();
+        if self.pos >= self.bytes.len() {
+            return Err(SExprParseError {
+                pos: self.pos,
+                msg: "unexpected end of input".to_string(),
+            });
+        }
+        let c = self.bytes[self.pos];
+        if c == b'(' {
+            self.pos += 1;
+            let mut items = Vec::new();
+            loop {
+                self.skip_ws();
+                if self.pos >= self.bytes.len() {
+                    return Err(SExprParseError {
+                        pos: self.pos,
+                        msg: "unclosed list".to_string(),
+                    });
+                }
+                if self.bytes[self.pos] == b')' {
+                    self.pos += 1;
+                    return Ok(SExpr::SExprList(items));
+                }
+                items.push(self.parse_one()?);
+            }
+        }
+        if c == b')' {
+            return Err(SExprParseError {
+                pos: self.pos,
+                msg: "unexpected )".to_string(),
+            });
+        }
+        let start = self.pos;
+        while self.pos < self.bytes.len() {
+            let b = self.bytes[self.pos];
+            if b.is_ascii_whitespace() || b == b'(' || b == b')' || b == b';' {
+                break;
+            }
+            self.pos += 1;
+        }
+        let atom = std::str::from_utf8(&self.bytes[start..self.pos]).map_err(|e| {
+            SExprParseError {
+                pos: start,
+                msg: e.to_string(),
+            }
+        })?;
+        if let Ok(n) = atom.parse::<usize>() {
+            return Ok(SExpr::SpecConstant(Literal::Numeral(n)));
+        }
+        Ok(SExpr::Symbol(atom.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod sexpr_tests {
+    use super::*;
+
+    #[test]
+    fn parses_atoms() {
+        assert_eq!(
+            SExpr::from_str("foo").unwrap(),
+            SExpr::Symbol("foo".into())
+        );
+        assert_eq!(
+            SExpr::from_str("42").unwrap(),
+            SExpr::SpecConstant(Literal::Numeral(42))
+        );
+        assert_eq!(SExpr::from_str("true").unwrap().as_bool(), Some(true));
+        assert_eq!(SExpr::from_str("false").unwrap().as_bool(), Some(false));
+    }
+
+    #[test]
+    fn parses_empty_and_singleton_lists() {
+        assert_eq!(SExpr::from_str("()").unwrap(), SExpr::SExprList(vec![]));
+        assert_eq!(
+            SExpr::from_str("(ltl.p0)").unwrap(),
+            SExpr::SExprList(vec![SExpr::Symbol("ltl.p0".into())])
+        );
+    }
+
+    #[test]
+    fn parses_nested() {
+        let v = SExpr::from_str("(and (= a b) (not c))").unwrap();
+        let list = v.as_slice().unwrap();
+        assert_eq!(list[0].as_symbol(), Some("and"));
+        assert_eq!(list.len(), 3);
+    }
+
+    #[test]
+    fn handles_comments() {
+        let v = SExpr::from_str("(a ; comment\n b)").unwrap();
+        assert_eq!(v.as_slice().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn round_trips_via_display() {
+        let src = "(match phi ((ltl.p0) (p0 (t asp))) ((ltl.not x) (not (LTL.Sem x asp))))";
+        let v = SExpr::from_str(src).unwrap();
+        let s = v.to_string();
+        let v2 = SExpr::from_str(&s).unwrap();
+        assert_eq!(v, v2);
+    }
+
+    #[test]
+    fn parses_symbols_with_special_chars() {
+        let v = SExpr::from_str("($neg1 + next.depth)").unwrap();
+        let list = v.as_slice().unwrap();
+        assert_eq!(list[0].as_symbol(), Some("$neg1"));
+        assert_eq!(list[1].as_symbol(), Some("+"));
+        assert_eq!(list[2].as_symbol(), Some("next.depth"));
+    }
+
+    #[test]
+    fn rejects_trailing_garbage() {
+        assert!(SExpr::from_str("(a) extra").is_err());
+    }
 }
 
 #[derive(Debug, Clone, Display)]
