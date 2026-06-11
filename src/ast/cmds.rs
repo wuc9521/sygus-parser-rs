@@ -353,7 +353,11 @@ impl SyGuSCmd {
                 let mut inner = pair.clone().into_inner();
                 let feature = inner.next().unwrap().as_str().to_string();
                 let value = inner.next().unwrap().as_str().to_string();
-                let feature = match feature.as_str() {
+                // The pest rule matches `:fwd-decls` (keyword with leading
+                // colon), so `as_str()` returns the colon. Strip it before
+                // matching the bare feature names.
+                let feature_name = feature.strip_prefix(':').unwrap_or(feature.as_str());
+                let feature = match feature_name {
                     "grammars" => SyGuSFeature::Grammars,
                     "fwd-decls" => SyGuSFeature::FwdDecls,
                     "recursion" => SyGuSFeature::Recursion,
