@@ -75,7 +75,7 @@ Sort = {
 SyGuSTerm = {
   Identifier
 | Literal
-| "(" ~ Identifier ~ SyGuSTerm+ ~ ")"
+| "(" ~ Identifier ~ SyGuSTerm* ~ ")"
 | "(" ~ Bang ~ SyGuSTerm ~ Attribute+ ~ ")"
 | "(" ~ Exists ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
 | "(" ~ Forall ~ "(" ~ SortedVar+ ~ ")" ~ SyGuSTerm ~ ")"
@@ -85,7 +85,7 @@ SyGuSTerm = {
 SyGuSBfTerm = {
   Identifier
 | Literal
-| "(" ~ Identifier ~ SyGuSBfTerm+ ~ ")"
+| "(" ~ Identifier ~ SyGuSBfTerm* ~ ")"
 | "(" ~ Bang ~ SyGuSBfTerm ~ Attribute+ ~ ")"
 }
 

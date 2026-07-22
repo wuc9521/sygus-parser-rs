@@ -96,11 +96,19 @@ impl SyGuSTerm {
         };
 
         // Process the actual SyGuSTerm
+        let term_str = term_pair.as_str();
         let inner_pairs = term_pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
-            [pair] if pair.as_rule() == Rule::Identifier => Ok(SyGuSTerm::Identifier(
-                Identifier::from_str(pair.as_str()).unwrap(),
-            )),
+            [pair] if pair.as_rule() == Rule::Identifier => {
+                if term_str.starts_with('(') {
+                    let identifier = Identifier::from_str(pair.as_str()).unwrap();
+                    Ok(SyGuSTerm::Application(identifier, vec![]))
+                } else {
+                    Ok(SyGuSTerm::Identifier(
+                        Identifier::from_str(pair.as_str()).unwrap(),
+                    ))
+                }
+            }
             [pair] if pair.as_rule() == Rule::Literal => {
                 Ok(SyGuSTerm::Literal(Literal::from_str(pair.as_str())))
             }
@@ -263,11 +271,19 @@ impl SyGuSBfTerm {
     /// If the input does not match any valid structure, it returns an error detailing the unexpected format.
     ///
     pub fn parse(pair: Pair<'_, Rule>) -> Result<Self, SyGuSParseError> {
+        let bf_pair = pair.clone();
         let inner_pairs = pair.into_inner().collect_vec();
         match inner_pairs.as_slice() {
-            [pair] if pair.as_rule() == Rule::Identifier => Ok(SyGuSBfTerm::Identifier(
-                Identifier::from_str(pair.as_str()).unwrap(),
-            )),
+            [pair] if pair.as_rule() == Rule::Identifier => {
+                if bf_pair.as_str().starts_with('(') {
+                    let identifier = Identifier::from_str(pair.as_str()).unwrap();
+                    Ok(SyGuSBfTerm::Application(identifier, vec![]))
+                } else {
+                    Ok(SyGuSBfTerm::Identifier(
+                        Identifier::from_str(pair.as_str()).unwrap(),
+                    ))
+                }
+            }
             [pair] if pair.as_rule() == Rule::Literal => {
                 Ok(SyGuSBfTerm::Literal(Literal::from_str(pair.as_str())))
             }
