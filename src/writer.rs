@@ -369,11 +369,11 @@ fn write_sort_decl<W: Write>(writer: &mut W, decl: &SortDecl) -> io::Result<()> 
 
 fn write_feature<W: Write>(writer: &mut W, feature: &SyGuSFeature) -> io::Result<()> {
     let text = match feature {
-        SyGuSFeature::Grammars => "grammars",
-        SyGuSFeature::FwdDecls => "fwd-decls",
-        SyGuSFeature::Recursion => "recursion",
-        SyGuSFeature::Oracles => "oracles",
-        SyGuSFeature::Weights => "weights",
+        SyGuSFeature::Grammars => ":grammars",
+        SyGuSFeature::FwdDecls => ":fwd-decls",
+        SyGuSFeature::Recursion => ":recursion",
+        SyGuSFeature::Oracles => ":oracles",
+        SyGuSFeature::Weights => ":weights",
     };
     writer.write_all(text.as_bytes())
 }
